@@ -1,42 +1,52 @@
 #include<stdio.h>
 #include<stdlib.h>
-#include<conio.h>
+#include<conio2.h>
 #include<string.h>
 #include<windows.h>
-
+#define _NOCURSOR
 typedef struct pos_st
 {
     int x,y;
 } pos;
+typedef struct mapa
+{
+    char tamanho[100][100];
+    int largura,altura;
+} mapa;
 
-void imprime(char f[100][100]);
-void inicializa(char f[],char atual[100][100]);
-pos encontra (char tipo,char f[]);
+void imprime(mapa f);
+void inicializa(char f[],mapa* atual);
+pos encontra (char tipo,mapa atual);
+void atualiza(mapa atual,pos jogador);
+void movimenta(pos* jogador, int* i,int direcao,char c, mapa atual);
 int main()
 {
+    int direcao;
     pos jogador;
-    char c,f[100],atual[100][100];
+    char c,f[100];
+    mapa atual;
     printf("Entre o nome do arquivo que deseja abrir(sem o .txt no final):");
     gets(f); //fazer sem gets depois
     //strcpy(atual,"Atual.txt");
     strcat(f,".txt");
     printf("Entre o caractere que deseja encontrar: ");
     scanf("%c",&c);
-    inicializa(f,atual);
+    inicializa(f,&atual);
+    clrscr();
+    imprime(atual);
     jogador=encontra(c,atual);
-    printf("\nO jogador se encontra em %d x e %d y\n",jogador.x,jogador.y);
-
-     while(1)
-     {
-         imprime(atual);
-         //Sleep(100); Só serve para o windows tambem
-         system("cls"); //Só serve para o windows, depois podemos trocar por outra função
-     }
-
+    //printf("\nO jogador se encontra em %d x e %d y\n",jogador.x,jogador.y);
+    int i=0;
+    //gotoxy(jogador.x+1,jogador.y+1);
+    while(!i){
+            direcao=getch();
+    movimenta(&jogador,&i,direcao,c,atual);
+    }
+    getch();
     return 0;
 }
 
-void inicializa(char f[],char atual[100][100])
+void inicializa(char f[],mapa* atual)
 {
     int i=0;
     FILE *mapa;//*atual;
@@ -44,16 +54,18 @@ void inicializa(char f[],char atual[100][100])
     mapa=fopen(f,"r");
     //atual=fopen("Atual.txt","w+");
     while (fgets(texto,100,mapa)!=NULL)
-        {
-        strcpy(atual[i],texto);
+    {
+        strcpy(atual->tamanho[i],texto);
+        atual->largura=strlen(atual->tamanho[i]);
         i++;
-        }
-        //fputs(texto,atual);
+    }
+    //fputs(texto,atual);
     fclose(mapa);
     //fclose(atual);
+    atual->altura=i;
 }
 
-void imprime(char f[100][100])
+void imprime(mapa f)
 {
     /*
     FILE *atual;
@@ -64,48 +76,56 @@ void imprime(char f[100][100])
     fclose(atual);
     */
     int i=0;
-    for(i=0;i<50;i++)
-        printf("%s",f[i]);
+    for(i=0; i<f.altura; i++)
+        printf("%s",f.tamanho[i]);
+
 }
 
-pos encontra (char tipo,char f[])
+pos encontra(char tipo, mapa atual)
 {
-    pos caractere;
-    caractere.y=0; //Por algum motivo se eu nao declaro o .y como 0 aqui da erro
-    int i=0,xt,colunas=0,enc=0;
-    FILE *mapa;
-    char texto[100]= { };
-    mapa=fopen(f,"r");
-    while (fgets(texto,100,mapa)!=NULL) //Essa função trata linha do arquivo como uma string, entao tanto para imprimir para quanto buscar tem que ter essa mentalidade
+    int i=0,j=0;
+    pos posicao;
+    do
     {
-        xt=strlen(texto);
-        colunas++;
-        if(!enc)
+        do
         {
-            while(texto[i]!='\n'&&texto[i]!=tipo)
+            if (atual.tamanho[i][j]==tipo)
             {
-                if (texto[i+1]==tipo)
-                {
-                    enc=1;
-                    break;
-                }
-                caractere.x++;
-                if (texto[i+1]=='\n')
-                {
-                    caractere.y++;
-                    caractere.x=0;
-                }
-                i++;
+                posicao.x=j+1;//+1 em ambos para poder atualizar na tela
+                posicao.y=i+1;
+                break;
             }
+            j++;
         }
-        if (i==0&&!enc)   //O unico caso daqui ter um i=0 aqui seria se fosse uma linha vazia, se nao tiver no jogo da para tirar esse if
-        {
-            caractere.y++;
-        }
-        i=0;
+        while(j<atual.largura);
+        j=0;
+        i++;
     }
-    printf("\n");
-    printf("O arquivo tem: %d Comprimento e %d Altura\n",xt,colunas);
-    fclose(mapa);
-    return caractere;
+    while(i<atual.altura);
+    return posicao;
+}
+
+void movimenta(pos* jogador, int* i,int direcao,char c,mapa atual){
+    //fflush(stdin); //gotoxy(0,0);
+    if (direcao==72){//&&jogador->y-1==' '){//Para cima
+    putchxy(jogador->x,jogador->y,' ');
+    putchxy(jogador->x,jogador->y-1,'&');
+    jogador->y--;
+    }
+    if (direcao==80){ //Para baixo
+     putchxy(jogador->x,jogador->y,' ');
+    putchxy(jogador->x,jogador->y+1,'&');
+    jogador->y++;
+    }
+    if (direcao==75){ //Pro lado esquerdo
+    putchxy(jogador->x,jogador->y,' ');
+    putchxy(jogador->x-1,jogador->y,'&');
+    jogador->x--;
+    }
+    if (direcao==77){ //Pro outro lado esquerdo
+    putchxy(jogador->x,jogador->y,' ');
+    putchxy(jogador->x+1,jogador->y,'&');
+    jogador->x++;
+    }
+
 }
