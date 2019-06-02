@@ -5,60 +5,61 @@
 #include <windows.h>
 //#define _NOCURSOR
 
-typedef struct pos_st{
+typedef struct {
     int x, y;
 }tipo_pos;
 
-typedef struct mapa{
-    char tamanho[100][100];
+typedef struct {
+    char tamanho[25][62];
     int largura, altura;
 }tipo_mapa;
 
 
-void imprime(tipo_mapa f);
-void inicializa(char f[], tipo_mapa *atual);
-tipo_pos encontra (char tipo, tipo_mapa atual);
-void atualiza(tipo_mapa atual, tipo_pos jogador);
-void movimenta(tipo_pos *jogador, int direcao, char c, tipo_mapa atual);
+void imprime(tipo_mapa mapa);
+void inicializa(char nome_arquivo[], tipo_mapa *mapa);
+tipo_pos encontra (char personagem, tipo_mapa mapa);
+//void atualiza(tipo_mapa mapa, tipo_pos jogador);
+void movimenta(tipo_pos *jogador, int direcao, char c, tipo_mapa mapa);
 char teclado();
-int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador);
+int menu(int inicio, tipo_mapa *mapa, tipo_pos *jogador);
+void apaga_linha();
 
 
 int main(){
     int direcao, endgame = 0;
     tipo_pos jogador;
-    char f[100] = "mapabeta.txt", c = '&';
-    tipo_mapa atual;
+    char nome_arquivo[30] = "mapabeta.txt", c = '&';
+    tipo_mapa mapa;
     textcolor(WHITE);
     /*printf("Entre o nome do arquivo que deseja abrir(sem o .txt no final):");
     gets(f); //fazer sem gets depois
-    //strcpy(atual,"Atual.txt");
+    //strcpy(mapa,"mapa.txt");
     strcat(f,".txt");
     printf("Entre o caractere que deseja encontrar: ");
     scanf("%c",&c);*/
 
-    inicializa(f, &atual);
-    jogador = encontra(c, atual);
+    inicializa(nome_arquivo, &mapa);
+    jogador = encontra(c, mapa);
     //clrscr();
-    menu(1, &atual, &jogador);
-    imprime(atual);
+    menu(1, &mapa, &jogador);
+    imprime(mapa);
     //printf("\nO jogador se encontra em %d x e %d y\n", jogador.x, jogador.y);
     //gotoxy(jogador.x+1,jogador.y+1);
 
     while(!endgame){
         direcao = getch();
         if(direcao != 27){
-            movimenta(&jogador, direcao, c, atual);
+            movimenta(&jogador, direcao, c, mapa);
 
         }else{
-            endgame = menu(0, &atual, &jogador);
+            endgame = menu(0, &mapa, &jogador);
 
         }
     }
     return 0;
 }
 
-int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DEVE ACABAR
+int menu(int inicio, tipo_mapa *mapa, tipo_pos *jogador){//RETORNA 1 SE JOGO DEVE ACABAR
     char c;
     int endgame = 0;
     if(inicio){
@@ -96,7 +97,7 @@ int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DE
         start:
         gotoxy(1,26);
         textcolor(LIGHTGREEN);
-        printf(" (N)New Game  (L)Load Game  (S)Save  (Q)Quit Game  (R)Return");
+        printf("(N)New Game  (L)Load Game  (S)Save  (Q)Quit Game   (R)Return");
         textcolor(WHITE);
 
         while(!kbhit()){}
@@ -104,10 +105,9 @@ int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DE
         switch(c){
             case 'n':
                 clrscr();
-                inicializa("mapabeta.txt", atual);
-                imprime(*atual);
-                *jogador = encontra('&', *atual);
-                gotoxy(1,26);
+                inicializa("mapabeta.txt", mapa);
+                imprime(*mapa);
+                *jogador = encontra('&', *mapa);
                 //printf("\r\t\t\t\t\tNOVO JOGO\t\t\t\t\t");
                 break;
 
@@ -115,10 +115,9 @@ int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DE
                 //printf("\r\t\t\t\t\tCARREGAR JOGO\t\t\t\t\t");
                 //CHAMAR LEITURA DE MAPA JA SALVO
                 clrscr();
-                inicializa("mapajogo.txt", atual);
-                imprime(*atual);
-                *jogador = encontra('&', *atual);
-                gotoxy(1,26);
+                inicializa("mapajogo.txt", mapa);
+                imprime(*mapa);
+                *jogador = encontra('&', *mapa);
                 break;
 
             case 's':
@@ -127,7 +126,8 @@ int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DE
                 break;
 
             case 'r':
-                printf("\r\t\t\t\t\tVOLTAR AO JOGO\t\t\t\t\t");
+                //printf("\r                       RETURNING GAME\t\t\t\t\t\t\t");
+                apaga_linha();
                 break;
 
             case 'q':
@@ -140,8 +140,16 @@ int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DE
             default:
                 goto start;
         }
+        if(!endgame){
+            gotoxy(jogador->x, jogador->y);
+        }
     }
+
     return endgame;
+}
+
+void apaga_linha(){
+    printf("\r\t\t\t\t\t\t\t\t");
 }
 
 char teclado(){
@@ -153,84 +161,90 @@ char teclado(){
     return c;
 }
 
-void inicializa(char f[], tipo_mapa *atual){
+void inicializa(char nome_arquivo[], tipo_mapa *mapa){
     int i=0;
-    FILE *mapa;//*atual;
-    char texto[100];
-    mapa = fopen(f, "r");
-    //atual=fopen("Atual.txt","w+");
-    while(!feof(mapa)){
-        fgets(texto, 100, mapa);
-        strcpy(atual->tamanho[i], texto);
-        i++;
+    FILE *arquivo_mapa;//*mapa;
+    char texto[62];
+    arquivo_mapa = fopen(nome_arquivo, "r");
+    //mapa=fopen("mapa.txt","w+");
+    if(arquivo_mapa == NULL){
+        printf("ERRO AO ABRIR MAPA!\n");
+
+    }else{
+        while(!feof(arquivo_mapa)){
+            fgets(texto, 62, arquivo_mapa);
+            strcpy(mapa->tamanho[i], texto);
+            i++;
+        }
     }
-    //fputs(texto,atual);
-    fclose(mapa);
-    //fclose(atual);
-    atual->largura = strlen(atual->tamanho[0]) - 1;
-    atual->altura = i;
-    //printf("Largura: %d\tAltura: %d", atual->largura, atual->altura);
+
+    //fputs(texto,mapa);
+    fclose(arquivo_mapa);
+    //fclose(mapa);
+    mapa->largura = strlen(mapa->tamanho[0]) - 1;
+    mapa->altura = i;
+    //printf("Largura: %d\tAltura: %d", mapa->largura, mapa->altura);
 }
 
-void imprime(tipo_mapa f){
+void imprime(tipo_mapa mapa){
     int i;
     /*
-    FILE *atual;
+    FILE *mapa;
     char texto[100];
-    atual=fopen("Atual.txt","r+");
-    while (fgets(texto,100,atual)!=NULL)
+    mapa=fopen("mapa.txt","r+");
+    while (fgets(texto,100,mapa)!=NULL)
         printf("%s",texto);
-    fclose(atual);
+    fclose(mapa);
     */
-    for(i=0; i<f.altura; i++){
-        printf("%s",f.tamanho[i]);
+    for(i=0; i<mapa.altura; i++){
+        printf("%s", mapa.tamanho[i]);
 
     }
 
 }
 
-tipo_pos encontra(char personagem, tipo_mapa atual){
+tipo_pos encontra(char personagem, tipo_mapa mapa){
     int i, j;
     tipo_pos posicao;
-    for(i=0; i<atual.altura; i++){
-        for(j=0; j<atual.largura; j++){
-            if(atual.tamanho[i][j] == personagem){
-                posicao.x = j+1;//+1 em ambos para poder atualizar na tela
+    for(i=0; i<mapa.altura; i++){
+        for(j=0; j<mapa.largura; j++){
+            if(mapa.tamanho[i][j] == personagem){
+                posicao.x = j+1;//+1 em ambos para poder mapaizar na tela
                 posicao.y = i+1;
                 //printf("\t%d %d\n", posicao.x, posicao.y);
                 break;
             }
             //j++;
-        }//while(j<atual.largura);
+        }//while(j<mapa.largura);
         //j=0;
         //i++;
-    }//while(i<atual.altura);
+    }//while(i<mapa.altura);
 
     return posicao;
 }
 
-void movimenta(tipo_pos *jogador, int direcao, char c, tipo_mapa atual){
+void movimenta(tipo_pos *jogador, int direcao, char c, tipo_mapa mapa){
     //fflush(stdin); //gotoxy(0,0);
     switch (direcao){
-        case 119:
+        case 119://W
         case 72: //PARA CIMA
             putchxy(jogador->x,jogador->y,' ');
             putchxy(jogador->x,jogador->y-1,'&');
             jogador->y--;
             break;
-        case 115:
+        case 115://S
         case 80: //PARA BAIXO
             putchxy(jogador->x,jogador->y,' ');
             putchxy(jogador->x,jogador->y+1,'&');
             jogador->y++;
             break;
-        case 97:
+        case 97: //A
         case 75: //PARA ESQUERDA
             putchxy(jogador->x,jogador->y,' ');
             putchxy(jogador->x-1,jogador->y,'&');
             jogador->x--;
             break;
-        case 100:
+        case 100://D
         case 77: //PARA DIREITA
             putchxy(jogador->x,jogador->y,' ');
             putchxy(jogador->x+1,jogador->y,'&');
