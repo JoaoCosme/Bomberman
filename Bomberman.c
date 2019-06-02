@@ -3,15 +3,15 @@
 #include <conio2.h>
 #include <string.h>
 #include <windows.h>
-#define _NOCURSOR
+//#define _NOCURSOR
 
 typedef struct pos_st{
-    int x,y;
+    int x, y;
 }tipo_pos;
 
 typedef struct mapa{
     char tamanho[100][100];
-    int largura,altura;
+    int largura, altura;
 }tipo_mapa;
 
 
@@ -21,15 +21,15 @@ tipo_pos encontra (char tipo, tipo_mapa atual);
 void atualiza(tipo_mapa atual, tipo_pos jogador);
 void movimenta(tipo_pos *jogador, int direcao, char c, tipo_mapa atual);
 char teclado();
-int menu();
+int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador);
 
 
 int main(){
     int direcao, endgame = 0;
     tipo_pos jogador;
-    char f[100] = "mapa.txt", c = '&';
+    char f[100] = "mapabeta.txt", c = '&';
     tipo_mapa atual;
-
+    textcolor(WHITE);
     /*printf("Entre o nome do arquivo que deseja abrir(sem o .txt no final):");
     gets(f); //fazer sem gets depois
     //strcpy(atual,"Atual.txt");
@@ -38,9 +38,10 @@ int main(){
     scanf("%c",&c);*/
 
     inicializa(f, &atual);
-    clrscr();
-    imprime(atual);
     jogador = encontra(c, atual);
+    //clrscr();
+    menu(1, &atual, &jogador);
+    imprime(atual);
     //printf("\nO jogador se encontra em %d x e %d y\n", jogador.x, jogador.y);
     //gotoxy(jogador.x+1,jogador.y+1);
 
@@ -50,58 +51,97 @@ int main(){
             movimenta(&jogador, direcao, c, atual);
 
         }else{
-            endgame = menu();
-            //gotoxy(1, 14);
-            //printf("%d", endgame);
+            endgame = menu(0, &atual, &jogador);
 
         }
     }
-    //getch();
-    //clrscr();
     return 0;
 }
 
-
-int menu(){//RETORNA 1 SE JOGO DEVE ACABAR
+int menu(int inicio, tipo_mapa *atual, tipo_pos *jogador){//RETORNA 1 SE JOGO DEVE ACABAR
     char c;
-    //CHAMAR FUNCAO DE PAUSA DO JOGO AQUI
-    gotoxy(1,13);
-    printf("(n)Novo Jogo  ");
-    printf("(c)Carregar Jogo  ");
-    printf("(s)Salvar Jogo  ");
-    printf("(q)Sair do Jogo  ");
-    printf("(v)Voltar para o Jogo");
+    int endgame = 0;
+    if(inicio){
+        textcolor(LIGHTRED);
+        printf  ("############################################################");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                         BOMBERMAN                        #");
+        printf("\n#                        Beta Version                      #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                                                          #");
+        printf("\n#                  Press any key to continue               #");
+        printf("\n############################################################");
+        textcolor(WHITE);
+        while(!kbhit()){}
+        clrscr();
 
-    while(!kbhit()){}
-    c = teclado();
-    switch(c){
-        case 'n':
-            printf("\r\t\t\t\t\tNOVO JOGO\t\t\t\t\t");
-            //CHAMAR LEITURA DO ARQUIVO MAPA
-            break;
+    }else{
+        start:
+        gotoxy(1,26);
+        textcolor(LIGHTGREEN);
+        printf(" (N)New Game  (L)Load Game  (S)Save  (Q)Quit Game  (R)Return");
+        textcolor(WHITE);
 
-        case 'c':
-            printf("\r\t\t\t\t\tCARREGAR JOGO\t\t\t\t\t");
-            //CHAMAR LEITURA DE MAPA JA SALVO
-            break;
+        while(!kbhit()){}
+        c = teclado();
+        switch(c){
+            case 'n':
+                clrscr();
+                inicializa("mapabeta.txt", atual);
+                imprime(*atual);
+                *jogador = encontra('&', *atual);
+                gotoxy(1,26);
+                //printf("\r\t\t\t\t\tNOVO JOGO\t\t\t\t\t");
+                break;
 
-        case 's':
-            printf("\r\t\t\t\t\tSALVAR JOGO\t\t\t\t\t");
-            //ESCREVER MAPA EM ARQUIVO .txt E PONTUACAO EM ARQUIVO .bin
-            break;
+            case 'l':
+                //printf("\r\t\t\t\t\tCARREGAR JOGO\t\t\t\t\t");
+                //CHAMAR LEITURA DE MAPA JA SALVO
+                clrscr();
+                inicializa("mapajogo.txt", atual);
+                imprime(*atual);
+                *jogador = encontra('&', *atual);
+                gotoxy(1,26);
+                break;
 
-        case 'q':
-            printf("\r\t\t\t\t\tSAIR DO JOGO\t\t\t\t\t");
-            return 1;
+            case 's':
+                printf("\r\t\t\t\t\tSALVAR JOGO\t\t\t\t\t");
+                //ESCREVER MAPA EM ARQUIVO .txt E PONTUACAO EM ARQUIVO .bin
+                break;
 
-        case 'v':
-            printf("\r\t\t\t\t\tVOLTAR AO JOGO\t\t\t\t\t");
-            break;
+            case 'r':
+                printf("\r\t\t\t\t\tVOLTAR AO JOGO\t\t\t\t\t");
+                break;
 
-        default:
-            menu();
+            case 'q':
+                textcolor(RED);
+                printf("\r                        ENDING GAME\t\t\t\t\t\t\t");
+                textcolor(WHITE);
+                endgame = 1;
+                break;
+
+            default:
+                goto start;
+        }
     }
-    return 0;
+    return endgame;
 }
 
 char teclado(){
@@ -117,18 +157,19 @@ void inicializa(char f[], tipo_mapa *atual){
     int i=0;
     FILE *mapa;//*atual;
     char texto[100];
-    mapa=fopen(f,"r");
+    mapa = fopen(f, "r");
     //atual=fopen("Atual.txt","w+");
-    while (fgets(texto,100,mapa)!=NULL)
-    {
-        strcpy(atual->tamanho[i],texto);
-        atual->largura=strlen(atual->tamanho[i]);
+    while(!feof(mapa)){
+        fgets(texto, 100, mapa);
+        strcpy(atual->tamanho[i], texto);
         i++;
     }
     //fputs(texto,atual);
     fclose(mapa);
     //fclose(atual);
-    atual->altura=i;
+    atual->largura = strlen(atual->tamanho[0]) - 1;
+    atual->altura = i;
+    //printf("Largura: %d\tAltura: %d", atual->largura, atual->altura);
 }
 
 void imprime(tipo_mapa f){
@@ -141,26 +182,29 @@ void imprime(tipo_mapa f){
         printf("%s",texto);
     fclose(atual);
     */
-    for(i=0; i<f.altura; i++)
+    for(i=0; i<f.altura; i++){
         printf("%s",f.tamanho[i]);
+
+    }
 
 }
 
-tipo_pos encontra(char tipo, tipo_mapa atual){
-    int i=0,j=0;
+tipo_pos encontra(char personagem, tipo_mapa atual){
+    int i, j;
     tipo_pos posicao;
-    do{
-        do{
-            if(atual.tamanho[i][j]==tipo){
-                posicao.x=j+1;//+1 em ambos para poder atualizar na tela
-                posicao.y=i+1;
+    for(i=0; i<atual.altura; i++){
+        for(j=0; j<atual.largura; j++){
+            if(atual.tamanho[i][j] == personagem){
+                posicao.x = j+1;//+1 em ambos para poder atualizar na tela
+                posicao.y = i+1;
+                //printf("\t%d %d\n", posicao.x, posicao.y);
                 break;
             }
-            j++;
-        }while(j<atual.largura);
-        j=0;
-        i++;
-    }while(i<atual.altura);
+            //j++;
+        }//while(j<atual.largura);
+        //j=0;
+        //i++;
+    }//while(i<atual.altura);
 
     return posicao;
 }
@@ -193,24 +237,4 @@ void movimenta(tipo_pos *jogador, int direcao, char c, tipo_mapa atual){
             jogador->x++;
             break;
     }
-    /*if (direcao==72){//&&jogador->y-1==' '){//Para cima
-        putchxy(jogador->x,jogador->y,' ');
-        putchxy(jogador->x,jogador->y-1,'&');
-        jogador->y--;
-    }
-    if (direcao==80){ //Para baixo
-        putchxy(jogador->x,jogador->y,' ');
-        putchxy(jogador->x,jogador->y+1,'&');
-        jogador->y++;
-    }
-    if (direcao==75){ //Pro lado esquerdo
-        putchxy(jogador->x,jogador->y,' ');
-        putchxy(jogador->x-1,jogador->y,'&');
-        jogador->x--;
-    }
-    if (direcao==77){ //Pro outro lado esquerdo
-        putchxy(jogador->x,jogador->y,' ');
-        putchxy(jogador->x+1,jogador->y,'&');
-        jogador->x++;
-    }*/
 }
