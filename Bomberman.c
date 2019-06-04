@@ -3,12 +3,15 @@
 #include <conio2.h>
 #include <string.h>
 #include <windows.h>
+#include<time.h>
 #define MAXSAVES 9
-
+#define MAXEN 2
+#define VELOCIDADE 100 //Quanto menor mais rapido
 typedef struct
 {
     int x, y, vidas, bombas, chaves;
-    char frente;
+    char frente,caractere;
+    int direcao;
 } tipo_jogador;
 
 typedef struct
@@ -20,7 +23,7 @@ typedef struct
 void reset_jogador(tipo_jogador *jogador);
 void imprime(tipo_mapa mapa);
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa);
-void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa);
+void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa,int quant);
 void acao_jogador(tipo_jogador *jogador, int direcao, char c, tipo_mapa* mapa);
 char teclado();
 int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves);
@@ -30,29 +33,40 @@ void aguarda_teclado();
 void status(tipo_jogador *jogador);
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador);
 void limpa_loads();
-
+void inicializa_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa);
+void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa);
 int main()
 {
-    int action, num_saves=0, endgame = 0;
-    tipo_jogador jogador = {1,1,3,3,0,'c'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
-    char nome_arquivo[30] = "mapa_fase1.txt", c = 'j';
+    int action, num_saves=0, endgame = 0,i;
+    tipo_jogador jogador = {1,1,3,3,0,'c','j'},inimigos[MAXEN]={0,0,0,0,'c','E'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
+    char nome_arquivo[30] = "mapa_fase1.txt";
     tipo_mapa mapa;
+    srand(time(NULL));
 
     textcolor(WHITE);
     inicializa_mapa(nome_arquivo, &mapa);
-    encontra(&jogador, c, mapa);
+    encontra(&jogador, jogador.caractere, mapa,1);
     menu(1, &mapa, &jogador, &num_saves);
+    inicializa_inimigos(inimigos,&mapa);
     imprime(mapa);
     status(&jogador);
 
     //printf("\nO jogador se encontra em %d x e %d y\n", jogador.x, jogador.y);
-
+int aux=0;
     while(!endgame)
     {
+        movimento_inimigos(inimigos,&mapa);
+        aux++;
+        if(aux>5){//Esse 15 define com que periodo o inimigo muda de direcao
+            for(i=0;i<MAXEN;i++){
+                inimigos[i].direcao=rand()%4;
+            }
+            aux=0; //Falta deixar essa troca de direção mais elegante
+        }
         action = teclado();//getch();
         if(action != 27)
         {
-            acao_jogador(&jogador, action, c, &mapa);
+            acao_jogador(&jogador, action, jogador.caractere, &mapa);
 
         }
         else
@@ -145,7 +159,7 @@ start:
                 reset_jogador(jogador);
                 clrscr();
                 inicializa_mapa("mapa_fase1.txt", mapa);
-                encontra(jogador, 'j', *mapa);
+                encontra(jogador, jogador->caractere, *mapa,1);
                 imprime(*mapa);
                 status(jogador);
 
@@ -238,7 +252,7 @@ start:
                         }else{
                             clrscr();
                             inicializa_mapa(nome_save, mapa);
-                            encontra(jogador, 'j', *mapa);
+                            encontra(jogador, jogador->caractere, *mapa,1);
 
                             nome_save[7] = 'b';
                             nome_save[8] = 'i';
@@ -453,8 +467,8 @@ void imprime(tipo_mapa mapa){
 
 }
 
-void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa){
-    int i=0, j=0, x, y;
+void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa,int quant){
+    int i=0, j=0, x, y,aux=0;
     //for(i=0; i<mapa.altura; i++){
     //for(j=0; j<mapa.largura; j++){
     do
@@ -466,7 +480,7 @@ void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa){
                 x = j+1;//+1 para ficar conforme as coordenadas da tela, que começa em 1,1
                 y = i+2;//+2 para ficar conforme a tela (deslocada 1un para baixo)
                 //printf("\t%d %d\n", posicao.x, posicao.y);
-                break;
+                aux++;
             }
             j++;
         }
@@ -474,7 +488,7 @@ void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa){
         j=0;
         i++;
     }
-    while(i<mapa.altura);
+    while(i<mapa.altura&&aux<=quant);
     jogador->x = x;
     jogador->y = y;
 }
@@ -596,4 +610,68 @@ void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador){
         mapa->tamanho[y][x+1]=item;
         break;
     }
+}
+void inicializa_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa){
+int i;
+tipo_jogador padrao={0,0,0,0,0,'c','E',0};
+for(i=0;i<MAXEN;i++){
+    inimigos[i]=padrao;
+    encontra(&inimigos[i],inimigos[i].caractere,*mapa,i);
+    inimigos[i].direcao=rand()%4;
+}
+}
+void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa){
+int i,x,y;
+for(i=0;i<MAXEN;i++){
+     x = inimigos[i].x-1;
+    y = inimigos[i].y-2;
+    switch (inimigos[i].direcao)
+    {
+        case 0: //PARA CIMA
+            inimigos[i].frente = 'c';
+            if(mapa->tamanho[y-1][x]==' ')   //Comparo com o mapa, mas tiro um de cada para passar da coordenada 1,1 para 0,0. A subtração adicional é para ir para a proxima posição solicitadoa
+            {
+                putchxy(inimigos[i].x,inimigos[i].y,' ');
+                putchxy(inimigos[i].x,inimigos[i].y-1, inimigos[i].caractere);
+                atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]); //Dentro dessa função nao precisou do & antes de mapa e jogar pois nesse escopo eles já são ponteiros
+                inimigos[i].y--;
+
+            } else {inimigos[i].direcao=rand()%4;}
+            break;
+        case 1: //PARA BAIXO
+            inimigos[i].frente = 'b';
+            if(mapa->tamanho[y+1][x]==' ')
+            {
+                putchxy(inimigos[i].x,inimigos[i].y,' ');
+                putchxy(inimigos[i].x,inimigos[i].y+1,inimigos[i].caractere);
+                atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]);
+                inimigos[i].y++;
+
+            } else {inimigos[i].direcao=rand()%4;}
+            break;
+        case 2: //PARA ESQUERDA
+            inimigos[i].frente = 'e';
+            if(mapa->tamanho[y][x-1]==' ')
+            {
+                putchxy(inimigos[i].x,inimigos[i].y,' ');
+                putchxy(inimigos[i].x-1,inimigos[i].y,inimigos[i].caractere);
+                atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]);
+                inimigos[i].x--;
+
+            } else {inimigos[i].direcao=rand()%4;}
+            break;
+        case 3: //PARA DIREITA
+            inimigos[i].frente = 'd';
+            if(mapa->tamanho[y][x+1]==' ')
+            {
+                putchxy(inimigos[i].x,inimigos[i].y,' ');
+                putchxy(inimigos[i].x+1,inimigos[i].y,inimigos[i].caractere);
+                atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]);
+                inimigos[i].x++;
+            }
+            else {inimigos[i].direcao=rand()%4;}
+            break;
+}
+}
+Sleep(VELOCIDADE);;//Define a velocidade dos inimigos
 }
