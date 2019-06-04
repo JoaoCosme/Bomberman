@@ -3,7 +3,7 @@
 #include <conio2.h>
 #include <string.h>
 #include <windows.h>
-//#define _NOCURSOR
+#define MAXSAVES 9
 
 typedef struct
 {
@@ -23,24 +23,25 @@ void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa);
 void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa);
 void acao_jogador(tipo_jogador *jogador, int direcao, char c, tipo_mapa* mapa);
 char teclado();
-int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador);
-void apaga_linha();
+int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves);
+void apaga_linha(int x, int y);
 void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador);
 void aguarda_teclado();
 void status(tipo_jogador *jogador);
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador);
+void limpa_loads();
 
 int main()
 {
-    int action, endgame = 0;
+    int action, num_saves=0, endgame = 0;
     tipo_jogador jogador = {1,1,3,3,0,'c'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
     char nome_arquivo[30] = "mapa_fase1.txt", c = 'j';
     tipo_mapa mapa;
-    textcolor(WHITE);
 
+    textcolor(WHITE);
     inicializa_mapa(nome_arquivo, &mapa);
     encontra(&jogador, c, mapa);
-    menu(1, &mapa, &jogador);
+    menu(1, &mapa, &jogador, &num_saves);
     imprime(mapa);
     status(&jogador);
 
@@ -48,7 +49,7 @@ int main()
 
     while(!endgame)
     {
-        action = getch();
+        action = teclado();//getch();
         if(action != 27)
         {
             acao_jogador(&jogador, action, c, &mapa);
@@ -56,7 +57,7 @@ int main()
         }
         else
         {
-            endgame = menu(0, &mapa, &jogador);
+            endgame = menu(0, &mapa, &jogador, &num_saves);
 
         }
     }
@@ -80,11 +81,10 @@ void status(tipo_jogador *jogador){
     textcolor(WHITE);
 }
 
-int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador) //RETORNA 1 SE JOGO DEVE ACABAR
-{
+int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves) /*RETORNA 1 SE JOGO DEVE ACABAR*/{
     FILE *save_mapa, *save_status;
     char c, save_num, nome_save[20] = "save_0.txt", lista_saves[9][20];
-    int num_saves=0, i, endgame = 0;
+    int i, endgame = 0;
     if(inicio)
     {
         textcolor(LIGHTRED);
@@ -114,6 +114,18 @@ int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador) //RETORNA 1 SE JOGO
         printf("\n#                  Press any key to continue               #");
         printf("\n############################################################");
         textcolor(WHITE);
+        i=0;
+        do{ //TESTA QUANTOS SAVES JA EXISTEM
+            i++;
+            save_num = i + '0';
+            nome_save[5] = save_num;
+            save_mapa = fopen(nome_save, "r");
+            if(save_mapa != NULL){
+                strcpy(lista_saves[i-1], nome_save); //COPIA O NOME DO SAVE PARA UMA STRING
+                (*num_saves)++;
+                fclose(save_mapa);
+            }
+        }while(i<=MAXSAVES);
         aguarda_teclado();
         clrscr();
 
@@ -127,7 +139,6 @@ start:
         textcolor(WHITE);
 
         aguarda_teclado();
-        //c = teclado();
         switch(teclado()){
             case 'N':
             case 'n':
@@ -142,101 +153,168 @@ start:
 
             case 'L':
             case 'l':
-                i=0;
-                do{ //TESTA QUANTOS SAVES JA EXISTEM
-                    i++;
-                    save_num = i + '0';
+                for(i=0; i<=MAXSAVES; i++){
+                    save_num = i + '1';
                     nome_save[5] = save_num;
                     save_mapa = fopen(nome_save, "r");
                     if(save_mapa != NULL){
-                        strcpy(lista_saves[i-1], nome_save); //COPIA O NOME DO SAVE PARA UMA STRING
-                        num_saves++;
+                        strcpy(lista_saves[i], nome_save); //COPIA O NOME DO SAVE PARA UMA STRING
                         fclose(save_mapa);
-                    }
-                }while(save_mapa != NULL);
 
-                if(num_saves > 0){
+                    }else{
+                        strcpy(lista_saves[i], "EMPTY");
+
+                    }
+                }
+                if((*num_saves) > 0){
                     textcolor(LIGHTCYAN);
-                    for(i=0; i<num_saves; i++){ //IMPRIME A LISTA DE SAVES A DIRETIA DA TELA DO JOGO
-                        gotoxy(62, 3*i+1);
+                    for(i=0; i<MAXSAVES; i++){ //IMPRIME A LISTA DE SAVES A DIRETIA DA TELA DO JOGO
+                        gotoxy(63, 3*i+1);
                         printf("(%d)%s", i+1, lista_saves[i]);
                     }
+                    gotoxy(63, 27);
                     textcolor(WHITE);
+                    printf("(0)DELETE SAVE");
 
                     aguarda_teclado();
                     save_num = teclado();
 
-                    if(save_num<'1' || (save_num - '0')>num_saves){ //TESTA SE O USUARIO ESCOLHEU UM SAVE VALIDO, ENTRE 1 E NUM_SAVES
-                        for(i=0; i<num_saves; i++){ //APAGA A LISTA DE SAVES A DIRETIA DA TELA E VOLTA AO JOGO
-                            apaga_linha(62, 3*i+1);
+                    if(save_num == '0'){
+                        gotoxy(63, 27);
+                        textbackground(RED);
+                        printf("(0)DELETE SAVE");
+                        textbackground(BLACK);
+                        aguarda_teclado();
+                        save_num = teclado();
+
+                        if(save_num>'0' && (save_num - '0')<=MAXSAVES){
+                            strcpy(nome_save, "save_0.txt");
+                            nome_save[5] = save_num;
+
+                            if(remove(nome_save) != 0){
+                                gotoxy(1,1);
+                                textcolor(LIGHTGREEN);
+                                printf("\r                    ERRO AO EXCLUIR MAPA\t\t\t\t");
+                                textcolor(WHITE);
+                                break;
+
+                            }
+                            nome_save[7] = 'b';
+                            nome_save[8] = 'i';
+                            nome_save[9] = 'n';
+
+                            if(remove(nome_save) != 0){
+                                gotoxy(1,1);
+                                textcolor(LIGHTGREEN);
+                                printf("\r                   ERRO AO EXCLUIR STATUS\t\t\t\t");
+                                textcolor(WHITE);
+                                break;
+
+                            }
+                            nome_save[7] = 't';
+                            nome_save[8] = 'x';
+                            nome_save[9] = 't';
+                            gotoxy(1,1);
+                            textcolor(LIGHTGREEN);
+                            printf("\r                    %s EXCLUIDO\t\t\t\t", nome_save);
+                            textcolor(WHITE);
+                            (*num_saves)--;
+                            //break;
+
+                        }else{
+                            apaga_linha(1,1);
                         }
-                        break;
+
+                    }else if(save_num>'0' && (save_num - '0')<=MAXSAVES){
+                        strcpy(nome_save, lista_saves[save_num-'1']);
+                        nome_save[5] = save_num;
+                        if(nome_save[0] == 'E'){
+                            gotoxy(1,1);
+                            textcolor(LIGHTGREEN);
+                            printf("\r                       SAVE INEXISTENTE\t\t\t\t");
+                            textcolor(WHITE);
+                            //break;
+
+                        }else{
+                            clrscr();
+                            inicializa_mapa(nome_save, mapa);
+                            encontra(jogador, 'j', *mapa);
+
+                            nome_save[7] = 'b';
+                            nome_save[8] = 'i';
+                            nome_save[9] = 'n';
+
+                            inicializa_bin(nome_save, jogador);
+
+                            imprime(*mapa);
+                            status(jogador);
+
+                            gotoxy(1,1);
+                            textcolor(LIGHTGREEN);
+                            printf("\r                         %s\t\t\t\t", nome_save);
+                            textcolor(WHITE);
+                        }
+
+                    }else{
+                        apaga_linha(1,1);
+
                     }
-
-                    nome_save[5] = save_num;
-                    clrscr();
-
-                    inicializa_mapa(nome_save, mapa);
-                    encontra(jogador, 'j', *mapa);
-
-                    nome_save[7] = 'b';
-                    nome_save[8] = 'i';
-                    nome_save[9] = 'n';
-
-                    inicializa_bin(nome_save, jogador);
-
-                    imprime(*mapa);
-                    status(jogador);
-
-                    gotoxy(1,1);
-                    textcolor(LIGHTGREEN);
-                    printf("\r                         %s\t\t\t\t", nome_save);
-                    textcolor(WHITE);
 
                 }else{
                     gotoxy(1,1);
                     textcolor(LIGHTGREEN);
                     printf("\r                       NO SAVED GAMES\t\t\t\t");
                     textcolor(WHITE);
-                }
 
+                }
+                limpa_loads();
                 break;
 
             case 'S':
             case 's':
-                i=0;
-                do{ //TESTA QUANTOS SAVES JA EXISTEM
-                    i++;
-                    save_num = i + '0';
-                    nome_save[5] = save_num;
-                    save_mapa = fopen(nome_save, "r");
-                    if(save_mapa != NULL){
-                        fclose(save_mapa);
+                if((*num_saves)<=MAXSAVES){
+                    i=0;
+                    do{ //TESTA OS SAVES QUE JA EXISTEM
+                        i++;
+                        save_num = i + '0';
+                        nome_save[5] = save_num;
+                        save_mapa = fopen(nome_save, "r");
+                        if(save_mapa != NULL){
+                            fclose(save_mapa);
+                        }
+                    }while(save_mapa != NULL);
+
+                    save_mapa = fopen(nome_save, "w");
+                    nome_save[7] = 'b';
+                    nome_save[8] = 'i';
+                    nome_save[9] = 'n';
+                    save_status = fopen(nome_save, "wb");
+
+                    if(fwrite(jogador, sizeof(tipo_jogador), 1, save_status) != 1){
+                        gotoxy(1,1);
+                        textcolor(LIGHTRED);
+                        printf("ERRO AO SALVAR STATUS DO JOGADOR!");
+                        textcolor(WHITE);
                     }
-                }while(save_mapa != NULL);
 
-                save_mapa = fopen(nome_save, "w");
-                nome_save[7] = 'b';
-                nome_save[8] = 'i';
-                nome_save[9] = 'n';
-                save_status = fopen(nome_save, "wb");
+                    for(i=0; i<mapa->altura; i++){
+                        fputs(mapa->tamanho[i], save_mapa);
 
-                if(fwrite(jogador, sizeof(tipo_jogador), 1, save_status) != 1){
+                    }
+                    fclose(save_mapa);
+                    fclose(save_status);
+                    textcolor(LIGHTGREEN);
+                    printf("\r               GAME SAVED SUCCESSFULLY! %d LEFT\t\t\t\t\t", MAXSAVES-(*num_saves));
+                    textcolor(WHITE);
+                    (*num_saves)++;
+
+                }else{
+
                     gotoxy(1,1);
-                    textcolor(LIGHTRED);
-                    printf("ERRO AO SALVAR STATUS DO JOGADOR!");
+                    textcolor(LIGHTGREEN);
+                    printf("\r                      SAVES AT MAXIMUM\t\t\t\t");
                     textcolor(WHITE);
                 }
-
-                for(i=0; i<mapa->altura; i++){
-                    fputs(mapa->tamanho[i], save_mapa);
-
-                }
-                fclose(save_mapa);
-                fclose(save_status);
-                textcolor(LIGHTGREEN);
-                printf("\r                  GAME SAVED SUCCESSFULLY\t\t\t\t\t");
-                textcolor(WHITE);
                 break;
 
             case 'R':
@@ -257,11 +335,20 @@ start:
                 goto start;
         }
         if(!endgame){
-            gotoxy(jogador->x, jogador->y);
+            gotoxy(jogador->x+1, jogador->y);
         }
     }
 
     return endgame;
+}
+
+void limpa_loads(){
+    int i;
+    for(i=0; i<10; i++){ //APAGA A LISTA DE SAVES A DIRETIA DA TELA E VOLTA AO JOGO
+        apaga_linha(63, 3*i+1);
+    }
+    gotoxy(63, 27);
+    printf("\t\t\t");
 }
 
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador){
@@ -289,14 +376,12 @@ void aguarda_teclado(){
     while(!kbhit()){}
 }
 
-void apaga_linha(int x, int y)
-{
+void apaga_linha(int x, int y){
     gotoxy(x, y);
     printf("\t\t\t\t\t\t\t\t");
 }
 
-char teclado()
-{
+char teclado(){
     char c;
     if(kbhit())
     {
@@ -306,8 +391,7 @@ char teclado()
     return c;
 }
 
-void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa)
-{
+void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa){
     int i=0;
     FILE *arquivo_mapa;
     char texto[62];
@@ -335,8 +419,7 @@ void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa)
     //printf("Largura: %d\tAltura: %d", mapa->largura, mapa->altura);
 }
 
-void imprime(tipo_mapa mapa)
-{
+void imprime(tipo_mapa mapa){
     int i, j;
     gotoxy(1,2);
     for(i=0; i<mapa.altura; i++){
@@ -370,8 +453,7 @@ void imprime(tipo_mapa mapa)
 
 }
 
-void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa)
-{
+void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa){
     int i=0, j=0, x, y;
     //for(i=0; i<mapa.altura; i++){
     //for(j=0; j<mapa.largura; j++){
@@ -397,8 +479,7 @@ void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa)
     jogador->y = y;
 }
 
-void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa)
-{
+void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa){
     int x, y;
     x = jogador->x-1;
     y = jogador->y-2;
@@ -492,8 +573,7 @@ void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa)
     }
 }
 
-void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador)
-{
+void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador){
     int x, y;
     x = jogador->x-1;
     y = jogador->y-2;
