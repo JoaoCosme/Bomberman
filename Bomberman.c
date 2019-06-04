@@ -26,7 +26,7 @@ void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa);
 void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa,int quant);
 void acao_jogador(tipo_jogador *jogador, int direcao, char c, tipo_mapa* mapa);
 char teclado();
-int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves);
+int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves,tipo_jogador inimigos[]);
 void apaga_linha(int x, int y);
 void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador);
 void aguarda_teclado();
@@ -46,7 +46,7 @@ int main()
     textcolor(WHITE);
     inicializa_mapa(nome_arquivo, &mapa);
     encontra(&jogador, jogador.caractere, mapa,1);
-    menu(1, &mapa, &jogador, &num_saves);
+    menu(1, &mapa, &jogador, &num_saves,inimigos);
     inicializa_inimigos(inimigos,&mapa);
     imprime(mapa);
     status(&jogador);
@@ -71,7 +71,7 @@ int aux=0;
         }
         else
         {
-            endgame = menu(0, &mapa, &jogador, &num_saves);
+            endgame = menu(0, &mapa, &jogador, &num_saves,inimigos);
 
         }
     }
@@ -95,7 +95,7 @@ void status(tipo_jogador *jogador){
     textcolor(WHITE);
 }
 
-int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves) /*RETORNA 1 SE JOGO DEVE ACABAR*/{
+int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves,tipo_jogador inimigos[]) /*RETORNA 1 SE JOGO DEVE ACABAR*/{
     FILE *save_mapa, *save_status;
     char c, save_num, nome_save[20] = "save_0.txt", lista_saves[9][20];
     int i, endgame = 0;
@@ -160,6 +160,7 @@ start:
                 clrscr();
                 inicializa_mapa("mapa_fase1.txt", mapa);
                 encontra(jogador, jogador->caractere, *mapa,1);
+                inicializa_inimigos(inimigos,mapa);
                 imprime(*mapa);
                 status(jogador);
 
@@ -253,6 +254,7 @@ start:
                             clrscr();
                             inicializa_mapa(nome_save, mapa);
                             encontra(jogador, jogador->caractere, *mapa,1);
+                             inicializa_inimigos(inimigos,mapa);
 
                             nome_save[7] = 'b';
                             nome_save[8] = 'i';
