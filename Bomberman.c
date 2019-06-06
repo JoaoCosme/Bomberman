@@ -10,7 +10,7 @@
 typedef struct
 {
     int x, y, vidas, bombas, chaves;
-    char frente,caractere;
+    char frente, caractere;
     int direcao;
 } tipo_jogador;
 
@@ -20,26 +20,26 @@ typedef struct
     int largura, altura;
 } tipo_mapa;
 
-void reset_jogador(tipo_jogador *jogador);
+void reset(tipo_jogador *jogador);
 void imprime(tipo_mapa mapa);
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa);
 void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa,int quant);
-void acao_jogador(tipo_jogador *jogador, int direcao, char c, tipo_mapa* mapa);
+void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa);
 char teclado();
-int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves,tipo_jogador inimigos[]);
+void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves, tipo_jogador inimigos[], int *endgame);
 void apaga_linha(int x, int y);
 void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador);
 void aguarda_teclado();
 void status(tipo_jogador *jogador);
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador);
 void limpa_loads();
-void inicializa_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa);
-void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa,int *i,tipo_jogador* jogador,int* num_saves);
+void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa);
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int *i, tipo_jogador *jogador, int *num_saves, int *endgame);
 int diferenca_tempo(clock_t start,float set,int* i);
 int main()
 {
-    int action, num_saves=0, endgame = 0,i;
-    tipo_jogador jogador = {1,1,3,3,0,'c','j'},inimigos[MAXEN]= {0,0,0,0,'c','E'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
+    int action, num_saves=0, endgame = 0, i, auxinimigos=1;
+    tipo_jogador jogador = {1,1,3,3,0,'c','j'}, inimigos[MAXEN]= {0,0,0,0,'c','E'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
     char nome_arquivo[30] = "mapa_fase1.txt";
     tipo_mapa mapa;
     srand(time(NULL));
@@ -47,16 +47,15 @@ int main()
     textcolor(WHITE);
     inicializa_mapa(nome_arquivo, &mapa);
     encontra(&jogador, jogador.caractere, mapa,1);
-    menu(1, &mapa, &jogador, &num_saves,inimigos);
+    menu(1, &mapa, &jogador, &num_saves, inimigos, &endgame);
     inicializa_inimigos(inimigos,&mapa);
     imprime(mapa);
     status(&jogador);
 
     //printf("\nO jogador se encontra em %d x e %d y\n", jogador.x, jogador.y);
-    int auxinimigos=1;
     while(!endgame)
     {
-        movimento_inimigos(inimigos,&mapa,&auxinimigos,&jogador,&num_saves);
+        movimento_inimigos(inimigos, &mapa, &auxinimigos, &jogador, &num_saves, &endgame);
         action = teclado();//getch();
         if(action != 27)
         {
@@ -65,7 +64,7 @@ int main()
         }
         else
         {
-            endgame = menu(0, &mapa, &jogador, &num_saves,inimigos);
+            menu(0, &mapa, &jogador, &num_saves, inimigos, &endgame);
 
         }
     }
@@ -73,7 +72,7 @@ int main()
     return 0;
 }
 
-void reset_jogador(tipo_jogador *jogador)
+void reset(tipo_jogador *jogador)
 {
     jogador->x = 1;
     jogador->y = 1;
@@ -91,11 +90,11 @@ void status(tipo_jogador *jogador)
     textcolor(WHITE);
 }
 
-int menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves,tipo_jogador inimigos[]) /*RETORNA 1 SE JOGO DEVE ACABAR*/
+void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, int *num_saves, tipo_jogador inimigos[], int *endgame) /*ENDGAME = 1 SE JOGO DEVE ACABAR*/
 {
     FILE *save_mapa, *save_status;
     char c, save_num, nome_save[20] = "save_0.txt", lista_saves[9][20];
-    int i, endgame = 0;
+    int i;
     if(inicio)
     {
         textcolor(LIGHTRED);
@@ -157,7 +156,7 @@ start:
         {
         case 'N':
         case 'n':
-            reset_jogador(jogador);
+            reset(jogador);
             clrscr();
             inicializa_mapa("mapa_fase1.txt", mapa);
             encontra(jogador, jogador->caractere, *mapa,1);
@@ -381,20 +380,18 @@ start:
             textcolor(LIGHTRED);
             printf("\r                        ENDING GAME\t\t\t\t\t\t\n");
             textcolor(WHITE);
-            endgame = 1;
+            *endgame = 1;
             gotoxy(1,28);
             break;
 
         default:
             goto start;
         }
-        if(!endgame)
+        if(!(*endgame))
         {
             gotoxy(jogador->x+1, jogador->y);
         }
     }
-
-    return endgame;
 }
 
 void limpa_loads()
@@ -687,7 +684,7 @@ void inicializa_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa)
         inimigos[i].direcao=rand()%4;
     }
 }
-void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa,int *j,tipo_jogador* jogador,int* num_saves)
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int *j, tipo_jogador *jogador,int *num_saves, int *endgame)
 {
     int i,x,y,aux=0,k,primeirorun=1;
     clock_t start;
@@ -721,10 +718,13 @@ void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa,int *j,tipo_joga
                     inimigos[i].direcao=rand()%4;;
                     if(jogador->vidas==0)
                     {
-                        printf("MORTE");
-                        clrscr();
-
-                        menu(1, mapa, jogador, num_saves,inimigos);
+                        gotoxy(26 ,13);
+                        textcolor(LIGHTRED);
+                        printf("YOU DIED");
+                        textcolor(WHITE);
+                        gotoxy(1, 28);
+                        *endgame = 1;
+                        return;
                     }
 
                 }
@@ -753,10 +753,13 @@ void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa,int *j,tipo_joga
                     inimigos[i].direcao=rand()%4;
                     if(jogador->vidas==0)
                     {
-                        printf("MORTE");
-                        clrscr();
-
-                        menu(1, mapa, jogador, num_saves,inimigos);
+                        gotoxy(26 ,13);
+                        textcolor(LIGHTRED);
+                        printf("YOU DIED");
+                        textcolor(WHITE);
+                        gotoxy(1, 28);
+                        *endgame = 1;
+                        break;
 
                     }
                 }
@@ -785,10 +788,13 @@ void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa,int *j,tipo_joga
                     inimigos[i].direcao=rand()%4;
                     if(jogador->vidas==0)
                     {
-                        printf("MORTE");
-                                                clrscr();
-
-                        menu(1, mapa, jogador, num_saves,inimigos);
+                        gotoxy(26 ,13);
+                        textcolor(LIGHTRED);
+                        printf("YOU DIED");
+                        textcolor(WHITE);
+                        gotoxy(1, 28);
+                        *endgame = 1;
+                        break;
 
 
                     }
@@ -818,9 +824,13 @@ void movimento_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa,int *j,tipo_joga
                     inimigos[i].direcao=rand()%4;
                     if(jogador->vidas==0)
                     {
-                        printf("MORTE");
-                        clrscr();
-                        menu(1, mapa, jogador, num_saves,inimigos);
+                        gotoxy(26 ,13);
+                        textcolor(LIGHTRED);
+                        printf("YOU DIED");
+                        textcolor(WHITE);
+                        gotoxy(1, 28);
+                        *endgame = 1;
+                        break;
 
                     }
                 }
@@ -874,4 +884,3 @@ int diferenca_tempo(clock_t start,float set,int* i)
         return 0;
     }
 }
-
