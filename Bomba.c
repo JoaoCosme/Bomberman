@@ -7,6 +7,7 @@
 #define MAXSAVES 9
 #define MAXEN 5
 #define VELOCIDADE 100
+#define T_BOMBA 3000
 #define VAZIO 32 //32=ESPAÇO 88=X
 #define ENEMY 73 //I
 typedef struct{
@@ -20,11 +21,16 @@ typedef struct{
     int largura, altura;
 } tipo_mapa;
 
+typedef struct{
+    int mx, my, tx, ty, acionada;
+    clock_t start;
+} tipo_bomba;
+
 void reset(tipo_jogador *jogador);
 void imprime(tipo_mapa mapa);
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa);
 void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa, int quant);
-void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa);
+void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c, tipo_mapa* mapa);
 char teclado();
 void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimigos[], int *endgame);
 void apaga_linha(int x, int y);
@@ -34,8 +40,10 @@ void status(tipo_jogador *jogador);
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador);
 void limpa_loads();
 void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa);
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, int *endgame);
-int diferenca_tempo(clock_t start);
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, int *endgame/*, int primeirorun*/);
+int conta_tempo_inimigos(clock_t start);
+int conta_tempo_bomba(clock_t start);
+void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], int aciona);
 void HideCursor();
 
 int main(){
@@ -43,6 +51,7 @@ int main(){
     tipo_jogador jogador = {1,1,3,3,0,'c','J'}, inimigos[MAXEN]= {0,0,0,0,'c','E'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
     char nome_arquivo[30] = "Fase1.txt";
     tipo_mapa mapa;
+    tipo_bomba bombas[3];
     srand(time(NULL));
 
     HideCursor();
@@ -53,12 +62,14 @@ int main(){
     inicializa_inimigos(inimigos, &mapa);
     imprime(mapa);
     status(&jogador);
+    //movimento_inimigos(inimigos, &mapa, &jogador, &endgame, 1);
 
     while(!endgame){
-        movimento_inimigos(inimigos, &mapa, &jogador, &endgame);
+        //movimento_inimigos(inimigos, &mapa, &jogador, &endgame);
+        explode_bomba(&mapa, &jogador, bombas, 0);
         action = teclado();
         if(action != 27){
-            acao_jogador(&jogador, action, jogador.caractere, &mapa);
+            acao_jogador(&jogador, bombas, action, jogador.caractere, &mapa);
 
         }else{
             menu(0, &mapa, &jogador, inimigos, &endgame);
@@ -520,8 +531,9 @@ void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa,int quant){
     jogador->x = x;
     jogador->y = y;
 }
-void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa){
+void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c, tipo_mapa* mapa){
     int x, y;
+    clock_t start;
     x = jogador->x-1;
     y = jogador->y-2;
     switch(action){
@@ -571,12 +583,18 @@ void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa){
 
     case 'b'://BOMBA
     case 'B':
-        if(jogador->bombas>0){
+        if(jogador->bombas==3){
             switch(jogador->frente){
                 case 'c':
                     if(mapa->tamanho[y-1][x]==VAZIO){
                         putchxy(jogador->x, jogador->y-1, '@');
                         jogador->bombas--;
+                        bombas[0].tx = jogador->x;
+                        bombas[0].ty = jogador->y-1;
+                        bombas[0].mx = jogador->x-1;
+                        bombas[0].my = jogador->y-3;
+                        explode_bomba(mapa, jogador, bombas, 1);
+                        atualizamapa('@', mapa, jogador);
                     }
                     break;
 
@@ -584,6 +602,12 @@ void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa){
                     if(mapa->tamanho[y+1][x]==VAZIO){
                         putchxy(jogador->x, jogador->y+1, '@');
                         jogador->bombas--;
+                        bombas[0].tx = jogador->x;
+                        bombas[0].ty = jogador->y+1;
+                        bombas[0].mx = jogador->x-1;
+                        bombas[0].my = jogador->y-1;
+                        explode_bomba(mapa, jogador, bombas, 1);
+                        atualizamapa('@', mapa, jogador);
                     }
                     break;
 
@@ -591,6 +615,12 @@ void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa){
                     if(mapa->tamanho[y][x-1]==VAZIO){
                         putchxy(jogador->x-1, jogador->y, '@');
                         jogador->bombas--;
+                        bombas[0].tx = jogador->x-1;
+                        bombas[0].ty = jogador->y;
+                        bombas[0].mx = jogador->x-2;
+                        bombas[0].my = jogador->y-2;
+                        explode_bomba(mapa, jogador, bombas, 1);
+                        atualizamapa('@', mapa, jogador);
                     }
                     break;
 
@@ -598,11 +628,16 @@ void acao_jogador(tipo_jogador *jogador, int action, char c, tipo_mapa* mapa){
                     if(mapa->tamanho[y][x+1]==VAZIO){
                         putchxy(jogador->x+1, jogador->y, '@');
                         jogador->bombas--;
+                        bombas[0].tx = jogador->x+1;
+                        bombas[0].ty = jogador->y;
+                        bombas[0].mx = jogador->x;
+                        bombas[0].my = jogador->y-2;
+                        explode_bomba(mapa, jogador, bombas, 1);
+                        atualizamapa('@', mapa, jogador);
                     }
                     break;
 
                 }
-            atualizamapa('@', mapa, jogador);
             status(jogador);
         }
         break;
@@ -640,7 +675,7 @@ void inicializa_inimigos(tipo_jogador inimigos[],tipo_mapa* mapa){
         inimigos[i].direcao=rand()%4;
     }
 }
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, int *endgame){
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, int *endgame/*, int primeirorun*/){
     int i, x, y, aux=0, k, primeirorun=1;
     clock_t start;
     if(k!=0 && k!=1 && primeirorun){  //Filtro para confimar que é a prrimeira vez, tentei colocar k=0 no inicio mas dai nunca sai do laço
@@ -651,7 +686,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
         start=clock();
         k=1;
     }
-    if(diferenca_tempo(start)==1){
+    if(conta_tempo_inimigos(start)==1){
         k=0;
         for(i=0; i<MAXEN; i++){
             x = inimigos[i].x-1;
@@ -768,9 +803,9 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
         aux=0;
     }
 }
-int diferenca_tempo(clock_t start){
+int conta_tempo_inimigos(clock_t start){
     clock_t atual;
-    float set = 10000/VELOCIDADE;
+    float set = (float)10000/VELOCIDADE;
     double dif;
     int esgotou = 0;
 
@@ -781,6 +816,34 @@ int diferenca_tempo(clock_t start){
     }
 
     return esgotou;
+}
+int conta_tempo_bomba(clock_t start){
+    clock_t atual;
+    double dif;
+    int esgotou = 0;
+
+    atual=clock();
+    dif=1000*((double)(atual-start)/CLOCKS_PER_SEC);
+    if(dif >= (float)T_BOMBA){
+        esgotou = 1;
+    }
+    gotoxy(1,29);
+    printf("%d", clock());
+    return esgotou;
+}
+void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], int aciona){
+    int aux;
+    if(jogador->bombas < 3 && aciona){
+        bombas[0].start = clock();
+        gotoxy(1,28);
+        printf("%d", bombas[0].start);
+    }
+    if(jogador->bombas<3 && conta_tempo_bomba(bombas[0].start) == 1){
+        putchxy(bombas[0].tx, bombas[0].ty, VAZIO);
+        mapa->tamanho[bombas[0].my][bombas[0].mx] = VAZIO;
+        jogador->bombas++;
+        status(jogador);
+    }
 }
 void HideCursor(){
   CONSOLE_CURSOR_INFO cursor = {1, FALSE};

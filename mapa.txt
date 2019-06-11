@@ -1,12 +1,12 @@
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-a                                 a
-a                                 a
-a                                 a
-a                                 a
-a               j                 a
-a                                 a
-a                                 a
-a                                 a
-a                                 a
-a                                 a
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+###################################
+#                                 #
+#                                 #
+#                                 #
+#                                 #
+#               j                 #
+#                                 #
+#                                 #
+#                                 #
+#                                 #
+#                                 #
+###################################
