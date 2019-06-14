@@ -7,10 +7,12 @@
 #define NUMBOMBAS 3
 #define MAXSAVES 9
 #define MAXEN 5
-#define VELOCIDADE 100
+#define VELOCIDADE 50
 #define T_BOMBA 3000
 #define VAZIO 32 //32=ESPAÇO 88=X
 #define ENEMY 73 //I
+#define RANGE 2
+#define CHAVE 67
 typedef struct
 {
     int x, y, vidas, bombas, chaves;
@@ -34,26 +36,26 @@ void reset(tipo_jogador *jogador);
 void imprime(tipo_mapa mapa);
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa);
 void encontra (tipo_jogador *jogador, char personagem, tipo_mapa mapa, int quant);
-void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c, tipo_mapa* mapa);
+void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[], int action, char c, tipo_mapa* mapa);
 char teclado();
 void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimigos[], int *endgame);
 void apaga_linha(int x, int y);
 void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador);
 void aguarda_teclado();
-void status(tipo_jogador *jogador);
+void status(tipo_jogador *jogador, tipo_jogador inimigos[]);
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador);
 void limpa_loads();
 void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa);
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, int *endgame,clock_t* inicio);
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio);
 int conta_tempo_inimigos(clock_t* start);
 int conta_tempo_bomba(clock_t start);
-void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[]/*, int aciona*/);
+void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], tipo_jogador inimigos[]);
 void HideCursor();
 
 int main()
 {
-    int action, num_saves=0, endgame = 0, i;
-    tipo_jogador jogador = {1,1,3,NUMBOMBAS,0,'c','J'}, inimigos[MAXEN]= {0,0,0,0,'c','E'}; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
+    int action, num_saves=0, endgame=0, i, start=1;
+    tipo_jogador jogador = {1,1,3,NUMBOMBAS,0,'c','J'}, inimigos[MAXEN]; //INICIALIZA JOGADOR COM VIDAS, BOMBAS, NENHUMA CHAVE E FRENTE DO JOGADOR COMECA PARA CIMA
     char nome_arquivo[30] = "Fase1.txt";
     tipo_mapa mapa;
     tipo_bomba bombas[NUMBOMBAS];
@@ -65,29 +67,45 @@ int main()
     inicializa_mapa(nome_arquivo, &mapa);
     encontra(&jogador, jogador.caractere, mapa, 1);
     inicializa_inimigos(inimigos, &mapa);
-    menu(1, &mapa, &jogador, inimigos, &endgame);
+    menu(start, &mapa, &jogador, inimigos, &endgame);
     imprime(mapa);
-    status(&jogador);
-    movimento_inimigos(inimigos, &mapa, &jogador, &endgame, &inicio);
+    status(&jogador, inimigos);
+    movimento_inimigos(inimigos, &mapa, &jogador, &inicio);
 
     for(i=0; i<NUMBOMBAS; i++){
         bombas[i].acionada = 0;
     }
-
+    start = 0;
     while(!endgame)
     {
-        movimento_inimigos(inimigos, &mapa, &jogador, &endgame, &inicio);
-        explode_bomba(&mapa, &jogador, bombas);
-        action = teclado();
-        if(action != 27)
-        {
-            acao_jogador(&jogador, bombas, action, jogador.caractere, &mapa);
+        if(jogador.vidas>0 && jogador.chaves<5){
+            movimento_inimigos(inimigos, &mapa, &jogador, &inicio);
+            explode_bomba(&mapa, &jogador, bombas, inimigos);
+            action = teclado();
+            gotoxy(1,28);
+            if(action != 27)
+            {
+                acao_jogador(&jogador, inimigos, bombas, action, jogador.caractere, &mapa);
 
-        }
-        else
-        {
-            menu(0, &mapa, &jogador, inimigos, &endgame);
+            }
+            else
+            {
+                menu(start, &mapa, &jogador, inimigos, &endgame);
 
+            }
+        }else if(jogador.chaves == 5){
+            endgame = 1;
+            gotoxy(26 ,13);
+            textcolor(LIGHTGREEN);
+            printf("YOU WON");
+            textcolor(WHITE);
+
+        }else{
+            endgame = 1;
+            gotoxy(26 ,13);
+            textcolor(LIGHTRED);
+            printf("YOU DIED");
+            textcolor(WHITE);
         }
     }
     gotoxy(1, 28);
@@ -103,11 +121,17 @@ void reset(tipo_jogador *jogador)
     jogador->chaves = 0;
     jogador->frente = 'c';
 }
-void status(tipo_jogador *jogador)
+void status(tipo_jogador *jogador, tipo_jogador inimigos[])
 {
+    int i, num_inimigos=0;
+    for(i=0; i<MAXEN; i++){
+        if(inimigos[i].vidas){
+            num_inimigos++;
+        }
+    }
     gotoxy(1,27);
     textcolor(LIGHTGREEN);
-    printf("VIDAS:%d                   BOMBAS:%d                  CHAVES:%d", jogador->vidas, jogador->bombas, jogador->chaves);
+    printf("VIDAS:%d          BOMBAS:%d          CHAVES:%d       INIMIGOS:%d", jogador->vidas, jogador->bombas, jogador->chaves, num_inimigos);
     textcolor(WHITE);
 }
 void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimigos[], int *endgame) /*ENDGAME = 1 SE JOGO DEVE ACABAR*/
@@ -183,7 +207,7 @@ start:
             encontra(jogador, jogador->caractere, *mapa,1);
             inicializa_inimigos(inimigos, mapa);
             imprime(*mapa);
-            status(jogador);
+            status(jogador, inimigos);
 
             break;
 
@@ -301,7 +325,7 @@ start:
                         inicializa_bin(nome_save, jogador);
 
                         imprime(*mapa);
-                        status(jogador);
+                        status(jogador, inimigos);
 
                         gotoxy(1,1);
                         textcolor(LIGHTGREEN);
@@ -561,14 +585,15 @@ void encontra(tipo_jogador *jogador, char personagem, tipo_mapa mapa, int quant)
     jogador->x = x;
     jogador->y = y;
 }
-void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c, tipo_mapa *mapa)
+void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[], int action, char c, tipo_mapa *mapa)
 {
     int i, x, y;
     x = jogador->x-1;
     y = jogador->y-2;
     switch(action)
     {
-    case 119://W
+    case 119://w
+    case 87://W
     case 72: //PARA CIMA
         jogador->frente = 'c';
         if(mapa->tamanho[y-1][x]==VAZIO)    //Comparo com o mapa, mas tiro um de cada para passar da coordenada 1,1 para 0,0. A subtração adicional é para ir para a proxima posição solicitadoa
@@ -578,9 +603,18 @@ void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c
             atualizamapa(c, mapa, jogador); //Dentro dessa função nao precisou do & antes de mapa e jogar pois nesse escopo eles já são ponteiros
             jogador->y--;
 
+        }else if(mapa->tamanho[y-1][x]==CHAVE){
+            putchxy(jogador->x,jogador->y,' ');
+            putchxy(jogador->x,jogador->y-1, c);
+            atualizamapa(c, mapa, jogador);
+            jogador->y--;
+            jogador->chaves++;
+            status(jogador, inimigos);
+
         }
         break;
-    case 115://S
+    case 115://s
+    case 83://S
     case 80: //PARA BAIXO
         jogador->frente = 'b';
         if(mapa->tamanho[y+1][x]==VAZIO)
@@ -590,9 +624,17 @@ void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c
             atualizamapa(c, mapa, jogador);
             jogador->y++;
 
+        }else if(mapa->tamanho[y+1][x]==CHAVE){
+            putchxy(jogador->x,jogador->y,' ');
+            putchxy(jogador->x,jogador->y+1,c);
+            atualizamapa(c, mapa, jogador);
+            jogador->y++;
+            jogador->chaves++;
+            status(jogador, inimigos);
         }
         break;
-    case 97: //A
+    case 97://a
+    case 65://A
     case 75: //PARA ESQUERDA
         jogador->frente = 'e';
         if(mapa->tamanho[y][x-1]==VAZIO)
@@ -602,9 +644,17 @@ void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c
             atualizamapa(c, mapa, jogador);
             jogador->x--;
 
+        }else if(mapa->tamanho[y][x-1]==CHAVE){
+            putchxy(jogador->x,jogador->y,' ');
+            putchxy(jogador->x-1,jogador->y,c);
+            atualizamapa(c, mapa, jogador);
+            jogador->x--;
+            jogador->chaves++;
+            status(jogador, inimigos);
         }
         break;
-    case 100://D
+    case 100://d
+    case 68://D
     case 77: //PARA DIREITA
         jogador->frente = 'd';
         if(mapa->tamanho[y][x+1]==VAZIO)
@@ -613,6 +663,14 @@ void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c
             putchxy(jogador->x+1,jogador->y,c);
             atualizamapa(c, mapa, jogador);
             jogador->x++;
+
+        }else if(mapa->tamanho[y][x+1]==CHAVE){
+            putchxy(jogador->x,jogador->y,' ');
+            putchxy(jogador->x+1,jogador->y,c);
+            atualizamapa(c, mapa, jogador);
+            jogador->x++;
+            jogador->chaves++;
+            status(jogador, inimigos);
         }
         break;
 
@@ -702,7 +760,7 @@ void acao_jogador(tipo_jogador *jogador, tipo_bomba bombas[], int action, char c
                 }
                 break;
             }
-            status(jogador);
+            status(jogador, inimigos);
         }
     }
 }
@@ -734,7 +792,7 @@ void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador)
 void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa)
 {
     int i;
-    tipo_jogador padrao= {0,0,0,0,0,'c','E',0};
+    tipo_jogador padrao= {0,0,1,0,0,'c','E',0};
     for(i=0; i<MAXEN; i++)
     {
         inimigos[i] = padrao;
@@ -742,15 +800,16 @@ void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa)
         inimigos[i].direcao=rand()%4;
     }
 }
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, int *endgame, clock_t *inicio)
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio)
 {
-    int i, x, y, aux=0, aux2, novadir;
+    int i, j, x, y, aux=0, aux2, novadir, num_inimigos=0;
 
     if(conta_tempo_inimigos(inicio)==1)
     {
 
         for(i=0; i<MAXEN; i++)
         {
+            if(inimigos[i].vidas>0){
             x = inimigos[i].x-1;
             y = inimigos[i].y-2;
             aux++;
@@ -761,17 +820,16 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                 if(mapa->tamanho[y-1][x]==jogador->caractere)
                 {
                     jogador->vidas--;
-                    status(jogador);
+                    status(jogador, inimigos);
                     inimigos[i].direcao=rand()%4;;
-                    if(jogador->vidas==0)
+                    /*if(jogador->vidas==0)
                     {
                         gotoxy(26 ,13);
                         textcolor(LIGHTRED);
                         printf("YOU DIED");
                         textcolor(WHITE);
-                        *endgame = 1;
                         return;
-                    }
+                    }*/
                 }
                 if(mapa->tamanho[y-1][x]==VAZIO)    //Comparo com o mapa, mas tiro um de cada para passar da coordenada 1,1 para 0,0. A subtração adicional é para ir para a proxima posição solicitadoa
                 {
@@ -797,23 +855,22 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                 if(mapa->tamanho[y+1][x]==jogador->caractere)
                 {
                     jogador->vidas--;
-                    status(jogador);
+                    status(jogador, inimigos);
                     inimigos[i].direcao=rand()%4;
-                    if(jogador->vidas==0)
+                    /*if(jogador->vidas==0)
                     {
                         gotoxy(26 ,13);
                         textcolor(LIGHTRED);
                         printf("YOU DIED");
                         textcolor(WHITE);
-                        *endgame = 1;
                         break;
 
-                    }
+                    }*/
                 }
                 if(mapa->tamanho[y+1][x]==VAZIO)
                 {
                     putchxy(inimigos[i].x,inimigos[i].y,' ');
-                    putchxy(inimigos[i].x,inimigos[i].y+1,ENEMY);
+                    putchxy(inimigos[i].x,inimigos[i].y+1, ENEMY);
                     atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]);
                     inimigos[i].y++;
 
@@ -834,22 +891,21 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                 if(mapa->tamanho[y][x-1]==jogador->caractere)
                 {
                     jogador->vidas--;
-                    status(jogador);
+                    status(jogador, inimigos);
                     inimigos[i].direcao=rand()%4;
-                    if(jogador->vidas==0)
+                    /*if(jogador->vidas==0)
                     {
                         gotoxy(26 ,13);
                         textcolor(LIGHTRED);
                         printf("YOU DIED");
                         textcolor(WHITE);
-                        *endgame = 1;
                         break;
-                    }
+                    }*/
                 }
                 if(mapa->tamanho[y][x-1]==VAZIO)
                 {
                     putchxy(inimigos[i].x,inimigos[i].y,' ');
-                    putchxy(inimigos[i].x-1,inimigos[i].y,ENEMY);
+                    putchxy(inimigos[i].x-1,inimigos[i].y, ENEMY);
                     atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]);
                     inimigos[i].x--;
 
@@ -869,39 +925,40 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                 if(mapa->tamanho[y][x+1]==jogador->caractere)
                 {
                     jogador->vidas--;
-                    status(jogador);
+                    status(jogador, inimigos);
                     inimigos[i].direcao=rand()%4;
-                    if(jogador->vidas==0)
+                    /*if(jogador->vidas==0)
                     {
                         gotoxy(26 ,13);
                         textcolor(LIGHTRED);
                         printf("YOU DIED");
                         textcolor(WHITE);
-                        *endgame = 1;
                         break;
-                    }
+                    }*/
                 }
                 inimigos[i].frente = 'd';
                 if(mapa->tamanho[y][x+1]== VAZIO)
                 {
                     putchxy(inimigos[i].x,inimigos[i].y,' ');
-                    putchxy(inimigos[i].x+1,inimigos[i].y,ENEMY);
+                    putchxy(inimigos[i].x+1,inimigos[i].y, ENEMY);
                     atualizamapa(inimigos[i].caractere, mapa, &inimigos[i]);
                     inimigos[i].x++;
                 }
                  else
                 {
                     do{
-                    novadir=rand()%4;
-                    if (inimigos[i].direcao!=novadir){
-                    inimigos[i].direcao=rand()%4;
-                    aux2=1;}}
-                    while(!aux2);
+                        novadir=rand()%4;
+                        if (inimigos[i].direcao!=novadir){
+                            inimigos[i].direcao=rand()%4;
+                            aux2=1;
+                        }
+                    }while(!aux2);
                     aux2=0;
                 }
                 break;
             }
         }
+    }
     }
     if(aux>5)
     {
@@ -945,16 +1002,45 @@ int conta_tempo_bomba(clock_t start)
     //printf("Atual: %d", clock());
     return esgotou;
 }
-void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[])
+void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], tipo_jogador inimigos[])
 {
-    int i;
+    int i, j, x, y;
     for(i=0; i<NUMBOMBAS; i++){
         if(bombas[i].acionada && conta_tempo_bomba(bombas[i].start)){
-            putchxy(bombas[i].tx, bombas[i].ty, VAZIO);
-            mapa->tamanho[bombas[i].my][bombas[i].mx] = VAZIO;
+            for(y=bombas[i].my-RANGE; y<=bombas[i].my+RANGE; y++){
+                for(x=bombas[i].mx-RANGE; x<=bombas[i].mx+RANGE; x++){
+                    switch (mapa->tamanho[y][x]){
+                        case 'D':
+                        case 'B':
+                        case '@':
+                            mapa->tamanho[y][x] = VAZIO;
+                            putchxy(x+1, y+2, VAZIO);
+                            break;
+
+                        case 'E':
+                            for(j=0; j<MAXEN; j++){
+                                if(inimigos[j].x-1 == x && inimigos[j].y-2 == y){
+                                    inimigos[j].vidas--;
+                                }
+                            }
+                            mapa->tamanho[y][x] = VAZIO;
+                            putchxy(x+1, y+2, VAZIO);
+                            break;
+
+                        case 'K':
+                            mapa->tamanho[y][x] = CHAVE;
+                            putchxy(x+1, y+2, CHAVE);
+                            break;
+
+                        case 'J':
+                            jogador->vidas--;
+                            break;
+                    }
+                }
+            }
             jogador->bombas++;
             bombas[i].acionada = 0;
-            status(jogador);
+            status(jogador, inimigos);
         }
     }
 }
