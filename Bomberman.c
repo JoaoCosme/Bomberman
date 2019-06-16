@@ -135,7 +135,7 @@ LoadGame:
         else
         {
             start = 1;
-            gotoxy(23, 13);
+            gotoxy(25, 13);
             textcolor(LIGHTRED);
             printf("VOCE MORREU");
             textcolor(WHITE);
@@ -623,14 +623,14 @@ void imprime(tipo_mapa mapa)
             case 'W':
                 textbackground(LIGHTGRAY);
                 textcolor(LIGHTGRAY);
-                printf("#");
+                putchxy(j+1, i+2, '#');
                 textbackground(BLACK);
                 textcolor(WHITE);
                 break;
 
             case 'D':
                 textbackground(WHITE);
-                printf("&");
+                putchxy(j+1, i+2, '&');
                 textbackground(BLACK);
                 break;
 
@@ -638,44 +638,44 @@ void imprime(tipo_mapa mapa)
             case 'B':
                 textbackground(YELLOW);
                 textcolor(YELLOW);
-                printf("K");
+                putchxy(j+1, i+2, 'K');
                 textcolor(WHITE);
                 textbackground(BLACK);
                 break;
 
             case 'E':
                 textcolor(LIGHTRED);
-                printf("Y");
+                putchxy(j+1, i+2, ENEMY);
                 textcolor(WHITE);
                 break;
 
             case 'X':
-                printf(" ");
+                putchxy(j+1, i+2, ' ');
                 break;
 
             case 'J':
                 textcolor(LIGHTCYAN);
-                printf("S");
+                putchxy(j+1, i+2, PLAYER);
                 textcolor(WHITE);
                 break;
 
             case '@':
                 textcolor(LIGHTMAGENTA);
-                printf("@");
+                putchxy(j+1, i+2, BOMBA);
                 textcolor(WHITE);
                 break;
 
             case CHAVE:
                 textcolor(LIGHTGREEN);
-                printf("J");
+                putchxy(j+1, i+2, CHAVE_TELA);
                 textcolor(WHITE);
                 break;
 
             default:
-                printf("%c", mapa.tamanho[i][j]);
+                putchxy(j+1, i+2, mapa.tamanho[i][j]);
             }
         }
-        printf("\n");
+        //printf("\n");
         //printf("%s", mapa.tamanho[i]);
 
     }
@@ -1121,7 +1121,7 @@ int conta_tempo_bomba(tipo_bomba *bomba)
 }
 void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], tipo_jogador inimigos[])
 {
-    int i, j, x, y;
+    int i, j, x, y, morte=0;
     for(i=0; i<NUMBOMBAS; i++)
     {
         if(bombas[i].acionada && conta_tempo_bomba(&bombas[i]))
@@ -1166,12 +1166,17 @@ void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], 
                         break;
 
                     case 'J':
-                        jogador->vidas--;
+                        /*jogador->vidas--;
                         jogador->pontos-=100;
-                        novapos(jogador,mapa);
+                        novapos(jogador,mapa);*/
+                        morte = 1;
                         break;
                     }
                 }
+            }
+            if(morte){
+                mortejogador(jogador, mapa, inimigos);
+                morte = 0;
             }
             jogador->bombas++;
             bombas[i].acionada = 0;
@@ -1185,27 +1190,36 @@ void HideCursor()
     SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursor);
 }
 
-void novapos(tipo_jogador* jogador,tipo_mapa* mapa)
+void novapos(tipo_jogador* jogador, tipo_mapa* mapa)
 {
-    int x,y,i;
+    int x, y, i, j, emboscada;
     clock_t start,start1;
     start=clock();
     start1=start/2;
     do
     {
+        emboscada = 0;
         x=rand()%mapa->largura;
-        y=rand()%mapa->altura;
-    }
-    while(mapa->tamanho[y-2][x-1]!=' '||mapa->tamanho[y-2][x-1]=='W');
+        y=rand()%mapa->altura+1;
+        for(i=x-2; i<=x; i++){
+            for(j=y-3; j<=y-1; j++){
+                if(mapa->tamanho[j][i] == 'E'){
+                    emboscada = 1;
+                }
+            }
+        }
+
+    }while(mapa->tamanho[y-2][x-1] != VAZIO || emboscada/*||mapa->tamanho[y-2][x-1]=='W'*/);
+
     atualizamapa(jogador->caractere, mapa, jogador);
     putchxy(jogador->x,jogador->y,' ');
     jogador->x=x;
     jogador->y=y;
-    textcolor(RED);
+    textcolor(LIGHTCYAN);
     putchxy(x,y, PLAYER);
-    do
+    /*do
     {
-        /*
+
         if(i==0){
         textcolor(RED);
         putchxy(x,y, PLAYER);
@@ -1216,11 +1230,12 @@ void novapos(tipo_jogador* jogador,tipo_mapa* mapa)
         putchxy(x,y, PLAYER);
         if (i==1)
         i=0;
-        else i=1;}*/
+        else i=1;}
 
     }
-    while(!getch());
-    textcolor(LIGHTCYAN);
+    while(!getch());*/
+    //aguarda_teclado();
+    //textcolor(LIGHTCYAN);
     putchxy(x,y, PLAYER);
 }
 
@@ -1228,8 +1243,9 @@ void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[]
 {
     jogador->vidas--;
     jogador->pontos-=100;
-        if (jogador->vidas>0)
+    if (jogador->vidas>0){
         novapos(jogador,mapa);
+    }
     status(jogador, inimigos);
 }
 
