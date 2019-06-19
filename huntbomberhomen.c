@@ -55,7 +55,7 @@ void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa, int *endgame);
 void limpa_loads();
 void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[], int *endgame);
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio);
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio,tipo_bomba bombas[]);
 void reset(tipo_jogador *jogador, int start);
 void status(tipo_jogador *jogador, tipo_jogador inimigos[]);
 char teclado();
@@ -63,7 +63,7 @@ void novapos(tipo_jogador* jogador,tipo_mapa* mapa);
 void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[]);
 void novadirecaoinimigos(tipo_jogador* inimigos);
 void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa* mapa);
-void alinhado(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa,int* i);
+void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa);
 int main()
 {
     char fase[MAXFASES][20] = {"./Fases/Fase1.txt", "./Fases/Fase2.txt", "./Fases/Fase3.txt", "./Fases/Fase4.txt", "./Fases/Fase5.txt", "./Fases/Fase6.txt", "./Fases/Fase7.txt", "./Fases/Fase8.txt", "./Fases/Fase9.txt"};
@@ -87,7 +87,7 @@ LoadGame:
     inicializa_inimigos(inimigos, &mapa, start);
     imprime(mapa);
     status(&jogador, inimigos);
-    movimento_inimigos(inimigos, &mapa, &jogador, &inicio);
+    movimento_inimigos(inimigos, &mapa, &jogador, &inicio,bombas);
 
     start = 0;
 
@@ -101,7 +101,7 @@ LoadGame:
     {
         if(jogador.vidas>0 && jogador.chaves<5)
         {
-            movimento_inimigos(inimigos, &mapa, &jogador, &inicio);
+            movimento_inimigos(inimigos, &mapa, &jogador, &inicio,bombas);
 
 
             for(i=0; i<MAXEN; i++)
@@ -980,9 +980,9 @@ void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run
         inimigos[i].direcao=rand()%4;
     }
 }
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio)
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio,tipo_bomba bombas[])
 {
-    int i, j, x, y, aux2, novadir, num_inimigos=0,aux=0,difx[5],dify[5];
+    int i, j, x, y, aux2, novadir, num_inimigos=0,aux=0,difx,dify,bombaativada[NUMBOMBAS]={0};
 
     if(conta_tempo_inimigos(inicio)==1)
     {
@@ -993,19 +993,41 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
 
             if(inimigos[i].vidas == 1)
             {
-                //gotoxy((10*i)+1, 28);
-                //printf("[%d]%d %d", i, inimigos[i].x, inimigos[i].y);
                 x = inimigos[i].x-1;
                 y = inimigos[i].y-2;
                 num_inimigos++;
-                procurajogador(jogador,&inimigos[i],mapa);
-
-
+                for(j=0; j<NUMBOMBAS; j++)
+                {
+                    /*
+                    if(bombas[j].acionada==1&&bombaativada[j]==0)
+                        bombaativada[j]=1;
+                    else if(bombaativada>0&&bombas[j].acionada==0){
+                        bombaativada[j]=0;
+                    if(aux>0)
+                    aux--;
+                    }
+                gotoxy(1,30);
+                printf("BOMBAATIVA %d %d %d\n",bombaativada[0],bombaativada[1],bombaativada[2]);*/
+                gotoxy(1,30);
+                printf("BOMBAACIONADA %d %d %d",bombas[0].acionada,bombas[1].acionada,bombas[2].acionada);
+                if(bombas[j].acionada==0)
+                {
+                    procurajogador(jogador,&inimigos[i],mapa);
+                    aux++;
+                }
+                else if (bombas[j].acionada==1){
+               /* procurabomba(&bombas[j],&inimigos[i],mapa);
+                gotoxy(1,35);
+                printf("BOMBA PERTO E EU ESTOU INDO PARA %d",inimigos[i].direcao);
+                */}
+                }
+                difx=jogador->x-inimigos[i].x;
+                dify=jogador->y-inimigos[i].y;
                 switch (inimigos[i].direcao)
                 {
                 case 0: //PARA CIMA
                     inimigos[i].frente = 'c';
-                    if(mapa->tamanho[y-1][x]==jogador->caractere)
+                    if(mapa->tamanho[y-1][x]==jogador->caractere&&dify!=0&&(difx<=RADAR||difx>=-RADAR))
                     {
                         mortejogador(jogador,mapa,inimigos);
                         novadirecaoinimigos(&inimigos[i]);
@@ -1032,7 +1054,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     break;
                 case 1: //PARA BAIXO
                     inimigos[i].frente = 'b';
-                    if(mapa->tamanho[y+1][x]==jogador->caractere)
+                    if(mapa->tamanho[y+1][x]==jogador->caractere&&dify!=0&&(difx<=RADAR||difx>=-RADAR))
                     {
                         mortejogador(jogador,mapa,inimigos);
                         novadirecaoinimigos(&inimigos[i]);
@@ -1059,7 +1081,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     break;
                 case 2: //PARA ESQUERDA
                     inimigos[i].frente = 'e';
-                    if(mapa->tamanho[y][x-1]==jogador->caractere)
+                    if(mapa->tamanho[y][x-1]==jogador->caractere&&difx!=0&&(dify<=RADAR||dify>=-RADAR))
                     {
                         mortejogador(jogador,mapa,inimigos);
                         novadirecaoinimigos(&inimigos[i]);
@@ -1083,7 +1105,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     }
                     break;
                 case 3: //PARA DIREITA
-                    if(mapa->tamanho[y][x+1]==jogador->caractere)
+                    if(mapa->tamanho[y][x+1]==jogador->caractere&&difx!=0&&(dify<=RADAR||dify>=-RADAR))
                     {
                         mortejogador(jogador,mapa,inimigos);
                         novadirecaoinimigos(&inimigos[i]);
@@ -1305,14 +1327,10 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
     int difx,dify,x,y,diresc=0;
     x = inimigos->x-1;
     y = inimigos->y-2;
-    gotoxy(1,28);
-    printf("X%d Y%d",jogador->x,jogador->y);
     difx=jogador->x-inimigos->x;
     dify=jogador->y-inimigos->y;
-
     if (dify!=0&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO)) //Y
     {
-
         if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
         {
             inimigos->direcao=1;
@@ -1320,14 +1338,12 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
         }
         else if(dify<0&&dify>-RADAR&&diresc<2&&mapa->tamanho[y-1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
         {
-
             inimigos->direcao=0;
             diresc++;
         }
     }
     if (difx!=0&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO)) //X
     {
-
         if (difx>0&&difx<RADAR&&diresc<2&&mapa->tamanho[y][x-1]== VAZIO&&(dify>0&&dify<RADAR||dify<0&&dify>-RADAR))
         {
             inimigos->direcao=3;
@@ -1339,61 +1355,70 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
             diresc++;
         }
     }
-
-
     if (diresc==1)
         inimigos->auxmudanca=0;
+    if (dify==0)//&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO))
+    {
+        if (difx>0)
+            inimigos->direcao=3;
+        else inimigos->direcao=2;
+    }
+    if (difx==0)//&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO))
+    {
+        if (dify>0)
+            inimigos->direcao=1;
+        else inimigos->direcao=0;
+    }
+
 }
 
-void alinhado(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa,int* i)
+void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
 {
 
     int difx,dify,x,y,diresc=0;
     x = inimigos->x-1;
     y = inimigos->y-2;
-    gotoxy(1,28);
-    printf("X%d Y%d",jogador->x,jogador->y);
-    difx=jogador->x-inimigos->x;
-    dify=jogador->y-inimigos->y;
-
-    if(difx==0)
+    difx=bomba->tx-inimigos->x;
+    dify=bomba->ty-inimigos->y;
+    if (dify!=0&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO))//Y
     {
-        i-=1;
-        if (dify!=0&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO)) //Y
+        if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
         {
-
-            if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
-            {
-                inimigos->direcao=1;
-                diresc++;
-            }
-            else if(dify<0&&dify>-RADAR&&diresc<2&&mapa->tamanho[y-1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
-            {
-
-                inimigos->direcao=0;
-                diresc++;
-            }
+            inimigos->direcao=1;
+            diresc++;
+        }
+        else if(dify<0&&dify>-RADAR&&diresc<2&&mapa->tamanho[y-1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
+        {
+            inimigos->direcao=0;
+            diresc++;
         }
     }
-
-    if(dify==0)
+    if (difx!=0&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO)) //X
     {
-          i-=1;
-        if (difx!=0&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO)) //X
+        if (difx>0&&difx<RADAR&&diresc<2&&mapa->tamanho[y][x-1]== VAZIO&&(dify>0&&dify<RADAR||dify<0&&dify>-RADAR))
         {
-
-            if (difx>0&&difx<RADAR&&diresc<2&&mapa->tamanho[y][x-1]== VAZIO&&(dify>0&&dify<RADAR||dify<0&&dify>-RADAR))
-            {
-                inimigos->direcao=3;
-                diresc++;
-            }
-            else if(difx<0&&difx>-RADAR&&diresc<2&&mapa->tamanho[y][x+1]== VAZIO&&(dify>0&&dify<RADAR||dify<0&&dify>-RADAR))
-            {
-                inimigos->direcao=2;
-                diresc++;
-            }
+            inimigos->direcao=2;
+            diresc++;
+        }
+        else if(difx<0&&difx>-RADAR&&diresc<2&&mapa->tamanho[y][x+1]== VAZIO&&(dify>0&&dify<RADAR||dify<0&&dify>-RADAR))
+        {
+            inimigos->direcao=3;
+            diresc++;
         }
     }
-
+    if (diresc==1)
+        inimigos->auxmudanca=0;
+    if (dify==0)//&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO))
+    {
+        if (difx>0)
+            inimigos->direcao=2;
+        else inimigos->direcao=3;
+            }
+    if (difx==0)//&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO))
+    {
+        if (dify>0)
+            inimigos->direcao=0;
+        else inimigos->direcao=1;
+    }
 
 }
