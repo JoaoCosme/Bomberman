@@ -67,7 +67,7 @@ void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa);
 int main()
 {
     char fase[MAXFASES][20] = {"./Fases/Fase1.txt", "./Fases/Fase2.txt", "./Fases/Fase3.txt", "./Fases/Fase4.txt", "./Fases/Fase5.txt", "./Fases/Fase6.txt", "./Fases/Fase7.txt", "./Fases/Fase8.txt", "./Fases/Fase9.txt"};
-    int i, action, endgame=0, start = 1,aux=0;
+    int j, i, action, endgame=0, start = 1,aux=0,difbx[MAXEN]= {0},difby[MAXEN]= {0};
     tipo_jogador inimigos[MAXEN], jogador;
     tipo_mapa mapa;
     tipo_bomba bombas[NUMBOMBAS];
@@ -106,7 +106,26 @@ LoadGame:
 
             for(i=0; i<MAXEN; i++)
             {
-
+                /*   for(j=0; j<NUMBOMBAS; j++) // Roda para verificar todas as bombas
+                   {
+                       if(bombas[j].acionada==1){ // Calcula a distancia só das bombas acionadas no momento
+                   difbx[i]=bombas[j].tx-inimigos[i].x;
+                   difby[i]=bombas[j].ty-inimigos[i].y;
+                       }
+                    if (bombas[j].acionada==1&&((difbx[i]>-RADAR&&difbx[i]<RADAR)&&(difby[i]>-RADAR&&difby[i]<RADAR))){//Ve se tem alguma bomba acionada e no raio que o inimigo pode ver
+                   procurabomba(&bombas[j],&inimigos[i],&mapa);
+                   inimigos[i].auxmudanca=0;
+                   gotoxy(1,35+i);
+                   printf("%d - BOMBA PERTO E EU ESTOU INDO PARA %d",i,inimigos[i].direcao);
+                   }
+                   else { //Caso nao tenha caça o bomberhomem
+                      // procurajogador(&jogador,&inimigos[i],&mapa);
+                       gotoxy(1,35+i);
+                       apaga_linha;
+                   }
+                   */ gotoxy(1,30+i);
+                printf("Inimigos %d direcao %d",i,inimigos[i].direcao);
+                //}
                 //procurajogador(&jogador,&inimigos[i],&mapa);
                 if(inimigos[i].auxmudanca>FDIRECAO)
                 {
@@ -982,45 +1001,40 @@ void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run
 }
 void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio,tipo_bomba bombas[])
 {
-    int i, j, x, y, aux2, novadir, num_inimigos=0,aux=0,difx,dify,bombaativada[NUMBOMBAS]={0};
+    int i, j, x, y, aux2, novadir, num_inimigos=0,aux=0,difx,dify,bombaativada[NUMBOMBAS]= {0},difbx[MAXEN]= {0},difby[MAXEN]= {0};
 
     if(conta_tempo_inimigos(inicio)==1)
     {
         textcolor(LIGHTRED);
         for(i=0; i<MAXEN; i++)
         {
-
-
             if(inimigos[i].vidas == 1)
             {
                 x = inimigos[i].x-1;
                 y = inimigos[i].y-2;
                 num_inimigos++;
-                for(j=0; j<NUMBOMBAS; j++)
+                for(j=0; j<NUMBOMBAS; j++) // Roda para verificar todas as bombas
                 {
-                    /*
-                    if(bombas[j].acionada==1&&bombaativada[j]==0)
-                        bombaativada[j]=1;
-                    else if(bombaativada>0&&bombas[j].acionada==0){
-                        bombaativada[j]=0;
-                    if(aux>0)
-                    aux--;
+                    if(bombas[j].acionada==1)  // Calcula a distancia só das bombas acionadas no momento
+                    {
+                        difbx[i]=bombas[j].tx-inimigos[i].x;
+                        difby[i]=bombas[j].ty-inimigos[i].y;
                     }
-                gotoxy(1,30);
-                printf("BOMBAATIVA %d %d %d\n",bombaativada[0],bombaativada[1],bombaativada[2]);*/
-                gotoxy(1,30);
-                printf("BOMBAACIONADA %d %d %d",bombas[0].acionada,bombas[1].acionada,bombas[2].acionada);
-                if(bombas[j].acionada==0)
-                {
-                    procurajogador(jogador,&inimigos[i],mapa);
-                    aux++;
+                    if (bombas[j].acionada==1&&((difbx[i]>-RADAR&&difbx[i]<RADAR)&&(difby[i]>-RADAR&&difby[i]<RADAR))) //Ve se tem alguma bomba acionada e no raio que o inimigo pode ver
+                    {
+                        procurabomba(&bombas[j],&inimigos[i],mapa);
+                        inimigos[i].auxmudanca=0; //Usei isso como uma flag para impedir que ele persiga o jogador no próximo else, pq talvez a bomba 2 esteja acionado mas a três não, entao preciso ter certeza que ele nao vai mudar
+                        gotoxy(1,35+i);
+                        printf("%d - BOMBA PERTO E EU ESTOU INDO PARA %d",i,inimigos[i].direcao);
+                    }
+                    else if (inimigos[i].auxmudanca!=0)   //Caso nao tenha caça o bomberhomem
+                    {
+                        procurajogador(jogador,&inimigos[i],mapa);
+                        gotoxy(1,35+i);
+                        apaga_linha;
+                    }
                 }
-                else if (bombas[j].acionada==1){
-               /* procurabomba(&bombas[j],&inimigos[i],mapa);
-                gotoxy(1,35);
-                printf("BOMBA PERTO E EU ESTOU INDO PARA %d",inimigos[i].direcao);
-                */}
-                }
+
                 difx=jogador->x-inimigos[i].x;
                 dify=jogador->y-inimigos[i].y;
                 switch (inimigos[i].direcao)
@@ -1327,9 +1341,9 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
     int difx,dify,x,y,diresc=0;
     x = inimigos->x-1;
     y = inimigos->y-2;
-    difx=jogador->x-inimigos->x;
+    difx=jogador->x-inimigos->x; //VERIFICA A DISTANCIA DO JOGADOR
     dify=jogador->y-inimigos->y;
-    if (dify!=0&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO)) //Y
+    if (dify!=0&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO)) //VERIFICA EM Y SE A DISTANCIA DO JOGADOR TA DENTRO DO RADAR E SE O INIMIGO PODE SE MOVER NESSA DIRECAO/
     {
         if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
         {
@@ -1355,15 +1369,15 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
             diresc++;
         }
     }
-    if (diresc==1)
+    if (diresc==1) //PARA IMPEDIR QUE ELE MUDE DE DIRECAO NO MEIO DA PERSEGUICAO
         inimigos->auxmudanca=0;
-    if (dify==0)//&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO))
+    if (dify==0)
     {
         if (difx>0)
             inimigos->direcao=3;
         else inimigos->direcao=2;
     }
-    if (difx==0)//&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO))
+    if (difx==0)
     {
         if (dify>0)
             inimigos->direcao=1;
@@ -1374,7 +1388,7 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
 
 void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
 {
-
+//BOMBA EH A MESMA COISA SÓ QUE COM A DIRECAO ESCOLHIDA AO CONTRARIO
     int difx,dify,x,y,diresc=0;
     x = inimigos->x-1;
     y = inimigos->y-2;
@@ -1384,12 +1398,12 @@ void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
     {
         if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
         {
-            inimigos->direcao=1;
+            inimigos->direcao=0;
             diresc++;
         }
         else if(dify<0&&dify>-RADAR&&diresc<2&&mapa->tamanho[y-1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
         {
-            inimigos->direcao=0;
+            inimigos->direcao=1;
             diresc++;
         }
     }
@@ -1408,17 +1422,34 @@ void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
     }
     if (diresc==1)
         inimigos->auxmudanca=0;
-    if (dify==0)//&&(mapa->tamanho[y][x-1]== VAZIO||mapa->tamanho[y][x+1]== VAZIO))
+    if (dify==0)//&&(mapa->tamanho[y][x-1]!= VAZIO||mapa->tamanho[y][x+1]!= VAZIO))
     {
         if (difx>0)
             inimigos->direcao=2;
         else inimigos->direcao=3;
-            }
-    if (difx==0)//&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO))
+    }
+    if (difx==0)//&&(mapa->tamanho[y+1][x]!=VAZIO||mapa->tamanho[y-1][x]!=VAZIO))
     {
         if (dify>0)
             inimigos->direcao=0;
         else inimigos->direcao=1;
-    }
-
+    }/* ESSE CODIGO COMENTADO SE REFERE A IMPEDIR QUE ELE FIQUE TRAVADO EM UM CANTO AO TENTAR FUGIR DA BOMBA, AINDA NAO SEI SE VALE A PENA
+    if((inimigos->direcao==2)&&mapa->tamanho[y][x-1]!=VAZIO)
+        inimigos->direcao=0;
+    else if(mapa->tamanho[y-1][x]!=VAZIO)
+        inimigos->direcao=1;
+    if((inimigos->direcao==3)&&mapa->tamanho[y][x+1]!=VAZIO)
+        inimigos->direcao=0;
+    else if(mapa->tamanho[y-1][x]!=VAZIO)
+        inimigos->direcao=1;
+    if((inimigos->direcao==0&&mapa->tamanho[y-1][x]!=VAZIO))
+        inimigos->direcao=2;
+    else if(mapa->tamanho[y][x]-1!=VAZIO)
+        inimigos->direcao=3;
+    if((inimigos->direcao==1&&mapa->tamanho[y+1][x]!=VAZIO))
+        inimigos->direcao=2;
+    else if(mapa->tamanho[y][x]-1!=VAZIO)
+        inimigos->direcao=3;
+/*
 }
+
