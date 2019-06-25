@@ -20,6 +20,7 @@
 #define BOMBA 164//216 64
 #define FDIRECAO 10 //Frequencia com que os inimigos mudam de posicao automaticamente
 #define RADAR 5 // Distancia que os inimigos enxergam
+#define MOVAV 0//1 ativa movimentação avançada 0 desliga ela.
 typedef struct
 {
     int x, y, vidas, bombas, chaves, pontos, direcao, fase;
@@ -989,6 +990,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                 x = inimigos[i].x-1;
                 y = inimigos[i].y-2;
                 num_inimigos++;
+                if(MOVAV){
                 for(j=0; j<NUMBOMBAS; j++) // Roda para verificar todas as bombas
                 {
                     if(bombas[j].acionada==1)  // Calcula a distancia só das bombas acionadas no momento
@@ -1005,6 +1007,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     {
                         procurajogador(jogador,&inimigos[i],mapa);
                     }
+                }
                 }
 
                 difx=jogador->x-inimigos[i].x;
@@ -1246,6 +1249,7 @@ void novapos(tipo_jogador* jogador, tipo_mapa* mapa)
     while(!getch());
     putchxy(x,y, PLAYER);
     atualizamapa(jogador->caractere, mapa, jogador);
+    atualizamapa(BOMBA, mapa, jogador);
 }
 
 void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[])
