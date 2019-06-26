@@ -20,12 +20,11 @@
 #define BOMBA 164//216 64
 #define FDIRECAO 10 //Frequencia com que os inimigos mudam de posicao automaticamente
 #define RADAR 5 // Distancia que os inimigos enxergam
-#define MOVAV 0//1 ativa movimentação avançada 0 desliga ela.
 typedef struct
 {
     int x, y, vidas, bombas, chaves, pontos, direcao, fase;
     char frente, caractere;
-    int auxmudanca;
+    int auxmudanca, nivel;
 } tipo_jogador;
 
 typedef struct
@@ -54,18 +53,20 @@ void imprime(tipo_mapa mapa);
 void inicializa_bin(char nome_bin[], tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[]);
 void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run);
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa, int *endgame);
+void invertedirecao(tipo_jogador* inimigos);
 void limpa_loads();
 void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[], int *endgame);
+void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[]);
 void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio,tipo_bomba bombas[]);
+void novadirecaoinimigos(tipo_jogador* inimigos);
+void novapos(tipo_jogador* jogador,tipo_mapa* mapa);
+void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa);
+void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa* mapa);
 void reset(tipo_jogador *jogador, int start);
 void status(tipo_jogador *jogador, tipo_jogador inimigos[]);
 char teclado();
-void novapos(tipo_jogador* jogador,tipo_mapa* mapa);
-void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[]);
-void novadirecaoinimigos(tipo_jogador* inimigos);
-void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa* mapa);
-void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa);
-void invertedirecao(tipo_jogador* inimigos);
+void tela_inicio(tipo_jogador *jogador, int *endgame);
+
 int main()
 {
     char fase[MAXFASES][20] = {"./Fases/Fase1.txt", "./Fases/Fase2.txt", "./Fases/Fase3.txt", "./Fases/Fase4.txt", "./Fases/Fase5.txt", "./Fases/Fase6.txt", "./Fases/Fase7.txt", "./Fases/Fase8.txt", "./Fases/Fase9.txt"};
@@ -80,8 +81,8 @@ int main()
     textcolor(WHITE);
 
 MenuInicial:
-    menu(start, &mapa, &jogador, inimigos, bombas, &endgame);
     reset(&jogador, start);
+    menu(start, &mapa, &jogador, inimigos, bombas, &endgame);
 
 LoadGame:
     inicializa_mapa(fase[jogador.fase], &mapa, &endgame);
@@ -151,7 +152,8 @@ LoadGame:
     return 0;
 }
 void reset(tipo_jogador *jogador, int start)
-{//Função para inicializacao do jogador
+{
+    //Função para inicializacao do jogador
     jogador->x = 1;
     jogador->y = 1;
     jogador->vidas = NUMVIDAS;
@@ -161,12 +163,14 @@ void reset(tipo_jogador *jogador, int start)
     jogador->caractere = 'J';
     if(start)
     {
+        jogador->nivel = 1;
         jogador->fase = 0;
         jogador->pontos = 0;
     }
 }
 void status(tipo_jogador *jogador, tipo_jogador inimigos[])
-{ //Funão para atualização dos dados exibidos em tela do jogo
+{
+    //Funão para atualização dos dados exibidos em tela do jogo
     int i, num_inimigos=0;
     for(i=0; i<MAXEN; i++)
     {
@@ -180,52 +184,77 @@ void status(tipo_jogador *jogador, tipo_jogador inimigos[])
         jogador->pontos = 0;
     }
     gotoxy(1,27);
-    textcolor(LIGHTGREEN);
+    if(jogador->nivel == 1){
+        textcolor(LIGHTGREEN);
+    }else if(jogador->nivel == 2){
+        textcolor(LIGHTRED);
+    }
     printf("PHASE:%d   LIFES:%d   BOMBS:%d   KEYS:%d   ENEMIES:%d  POINTS:%.3d", jogador->fase+1, jogador->vidas, jogador->bombas, jogador->chaves, num_inimigos, jogador->pontos);
     textcolor(WHITE);
+}
+void tela_inicio(tipo_jogador *jogador, int *endgame)
+{
+    int i;
+    textcolor(LIGHTRED);
+    gotoxy(26, 9);
+    printf("*BOMBERMAN");
+    gotoxy(22, 13);
+    for(i=1; i<=60; i++)
+    {
+        putchxy(i, 2, '#');
+    }
+    for(i=3; i<=25; i++)
+    {
+        putchxy(1, i, '#');
+        putchxy(60, i, '#');
+    }
+    for(i=1; i<=60; i++)
+    {
+        putchxy(i, 26, '#');
+    }
+    gotoxy(25, 14);
+    printf("SELECT LEVEL");
+    gotoxy(27, 16);
+    printf("(1)EASY");
+    gotoxy(27, 17);
+    printf("(2)HARD");
+    gotoxy(27, 18);
+    printf("(3)QUIT");
+    textcolor(WHITE);
+
+    aguarda_teclado();
+    do
+    {
+        jogador->nivel = teclado() - 48;
+    }
+    while(jogador->nivel != 1 && jogador->nivel != 2 && jogador->nivel != 3);
+
+    clrscr();
+
+    if(jogador->nivel == 3){
+        gotoxy(1,13);
+        textcolor(LIGHTRED);
+        printf("\r                        ENDING GAME\t\t\t\t\t\t\n");
+        textcolor(WHITE);
+        *endgame = 1;
+    }
 }
 void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[], int *endgame) /*ENDGAME = 1 SE JOGO DEVE ACABAR*/
 {
     FILE *save_mapa, *save_status;
-    char c, save_num, nome_save[] = "save_0.txt", lista_saves[9][15];
+    char c, save_num, nome_save[] = "Saves/save_0.txt", lista_saves[9][20];
     int i, j;
     static int num_saves = 0;
+
     if(inicio)
     {
-        gotoxy(1,1);
-        textcolor(LIGHTRED);
-        printf("\n############################################################");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                         BOMBERMAN                        #");
-        printf("\n#                        Beta Version                      #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                                                          #");
-        printf("\n#                  Press any key to continue               #");
-        printf("\n############################################################");
-        textcolor(WHITE);
+        tela_inicio(jogador, endgame);
         i=0;
         do  //TESTA QUANTOS SAVES JA EXISTEM
         {
             i++;
             save_num = i + '0';
-            nome_save[5] = save_num;
+            nome_save[11] = save_num;
             save_mapa = fopen(nome_save, "r");
             if(save_mapa != NULL)
             {
@@ -235,8 +264,6 @@ void menu(int inicio, tipo_mapa *mapa, tipo_jogador *jogador, tipo_jogador inimi
             }
         }
         while(i<=MAXSAVES);
-        aguarda_teclado();
-        clrscr();
 
     }
     else
@@ -254,12 +281,16 @@ start:
         case 'n':
             reset(jogador, 0);
             clrscr();
-            inicializa_mapa("./Fases/Fase1.txt", mapa, endgame);
+
+            inicializa_mapa("Fases/Fase1.txt", mapa, endgame);
             encontra(jogador, mapa, 1);
             inicializa_inimigos(inimigos, mapa, 1);
-            imprime(*mapa);
-            status(jogador, inimigos);
+            tela_inicio(jogador, endgame);
 
+            if(!(*endgame)){
+                imprime(*mapa);
+                status(jogador, inimigos);
+            }
             break;
 
         case 'L':
@@ -267,7 +298,7 @@ start:
             for(i=0; i<=MAXSAVES; i++)
             {
                 save_num = i + '1';
-                nome_save[5] = save_num;
+                nome_save[11] = save_num;
                 save_mapa = fopen(nome_save, "r");
                 if(save_mapa != NULL)
                 {
@@ -307,8 +338,8 @@ start:
 
                     if(save_num>'0' && (save_num - '0')<=MAXSAVES && lista_saves[save_num-'1'][0]!='E')
                     {
-                        strcpy(nome_save, "save_0.txt");
-                        nome_save[5] = save_num;
+                        strcpy(nome_save, "Saves/save_0.txt");
+                        nome_save[11] = save_num;
                         gotoxy(1, 28);
 
                         if(remove(nome_save) != 0)
@@ -323,9 +354,9 @@ start:
 
                         strcpy(lista_saves[save_num-'1'], "EMPTY");
 
-                        nome_save[7] = 'b';
-                        nome_save[8] = 'i';
-                        nome_save[9] = 'n';
+                        nome_save[13] = 'b';
+                        nome_save[14] = 'i';
+                        nome_save[15] = 'n';
 
                         if(remove(nome_save) != 0)
                         {
@@ -354,7 +385,7 @@ start:
                 else if(save_num>'0' && (save_num - '0')<=MAXSAVES)
                 {
                     strcpy(nome_save, lista_saves[save_num-'1']);
-                    nome_save[5] = save_num;
+                    nome_save[11] = save_num;
                     if(nome_save[0] == 'E')
                     {
                         gotoxy(1,1);
@@ -369,9 +400,9 @@ start:
                         clrscr();
                         inicializa_mapa(nome_save, mapa, endgame);
 
-                        nome_save[7] = 'b';
-                        nome_save[8] = 'i';
-                        nome_save[9] = 'n';
+                        nome_save[13] = 'b';
+                        nome_save[14] = 'i';
+                        nome_save[15] = 'n';
 
                         inicializa_bin(nome_save, jogador, inimigos, bombas);
 
@@ -412,7 +443,7 @@ start:
                 {
                     i++;
                     save_num = i + '0';
-                    nome_save[5] = save_num;
+                    nome_save[11] = save_num;
                     save_mapa = fopen(nome_save, "r");
                     if(save_mapa != NULL)
                     {
@@ -422,9 +453,9 @@ start:
                 while(save_mapa != NULL);
 
                 save_mapa = fopen(nome_save, "w");
-                nome_save[7] = 'b';
-                nome_save[8] = 'i';
-                nome_save[9] = 'n';
+                nome_save[13] = 'b';
+                nome_save[14] = 'i';
+                nome_save[15] = 'n';
                 save_status = fopen(nome_save, "wb");
 
                 if(fwrite(jogador, sizeof(tipo_jogador), 1, save_status) != 1)
@@ -474,16 +505,6 @@ start:
 
         case 'R':
         case 'r':
-            /*if(jogador->vidas>0)
-            {
-
-                apaga_linha(1, 1);
-                break;
-            }
-            else
-            {
-                goto start;
-            }*/
             apaga_linha(1, 1);
             break;
 
@@ -501,7 +522,6 @@ start:
         }
         if(!(*endgame))
         {
-            //gotoxy(jogador->x+1, jogador->y);
             for(j=0; j<NUMBOMBAS; j++)  // DESCONTA O TEMPO DECORRIDO DA BOMBA NO START DA MESMA PARA CONTAGEM APENAS DO TEMPO RESTANTE
             {
                 bombas[j].start = clock() - bombas[j].t_decorrido;
@@ -579,7 +599,8 @@ char teclado()
     return c;
 }
 void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa, int *endgame)
-{//Le o arquivo do mapa e transfere ele para uma matriz, que será utilizada para verificar colisões e posições w
+{
+    //Le o arquivo do mapa e transfere ele para uma matriz, que será utilizada para verificar colisões e posições w
     int i=0;
     FILE *arquivo_mapa;
     char texto[62];
@@ -613,7 +634,8 @@ void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa, int *endgame)
     mapa->altura = i;
 }
 void imprime(tipo_mapa mapa)
-{//Impressão do mapa na tela
+{
+    //Impressão do mapa na tela
     int i, j;
     gotoxy(1,2);
     for(i=0; i<mapa.altura; i++)
@@ -684,7 +706,8 @@ void imprime(tipo_mapa mapa)
 
 }
 void encontra(tipo_jogador *jogador, tipo_mapa *mapa, int qnt)
-{//Encontra o jogador no mapa
+{
+    //Encontra o jogador no mapa
     int i=0, j=0, x, y, cont=0;
     do
     {
@@ -706,14 +729,16 @@ void encontra(tipo_jogador *jogador, tipo_mapa *mapa, int qnt)
 
 }
 void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bombas[], int action, tipo_mapa *mapa)
-{//Função contendo tudo que o usuario pode comandar
+{
+    //Função contendo tudo que o usuario pode comandar
     int i, x, y;
     x = jogador->x-1;
     y = jogador->y-2;
     textcolor(LIGHTCYAN);
     //textbackground(LIGHTCYAN);
     switch(action)
-    { //Inicialmente temos a movimentação do jogador, com todas as atualizações em tela e na matriz necessarias
+    {
+    //Inicialmente temos a movimentação do jogador, com todas as atualizações em tela e na matriz necessarias
     case 119://w
     case 87://W
     case 72: //PARA CIMA
@@ -822,12 +847,14 @@ void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bom
     //Inserção de bomba
     case 'b'://BOMBA
     case 'B':
+    case '5':
         if(jogador->bombas>0)
         {
 
             textcolor(LIGHTMAGENTA);
             switch(jogador->frente)
-            {//VERIFICA PARA QUE DIRECAO O JOGADOR ESTPA VIRADO
+            {
+            //VERIFICA PARA QUE DIRECAO O JOGADOR ESTPA VIRADO
             case 'c':
                 if(mapa->tamanho[y-1][x]==VAZIO)
                 {
@@ -918,11 +945,30 @@ void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bom
             }
             status(jogador, inimigos);
         }
+        break;
+
+    case '4':
+        jogador->frente = 'e';
+        break;
+
+    case '2':
+        jogador->frente = 'b';
+        break;
+
+    case '6':
+        jogador->frente = 'd';
+        break;
+
+    case '8':
+        jogador->frente = 'c';
+        break;
+
     }
     textcolor(WHITE);
 }
 void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador)
-{//Atualiza a matriz contendo o mapa
+{
+    //Atualiza a matriz contendo o mapa
     int x, y;
     x = jogador->x-1;
     y = jogador->y-2;
@@ -951,7 +997,8 @@ void atualizamapa(char item, tipo_mapa *mapa, tipo_jogador *jogador)
     }
 }
 void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run)
-{ //Inicializa os inimigos, encontrando todos eles no mapa de acordo com MAXEN e selecionando uma direcao
+{
+    //Inicializa os inimigos, encontrando todos eles no mapa de acordo com MAXEN e selecionando uma direcao
     int i, num_inimigos = 0;
     tipo_jogador padrao= {0,0,1,0,0,0,0,0,'c','E',0};
 
@@ -976,9 +1023,9 @@ void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run
         inimigos[i].direcao=rand()%4;
     }
 }
-void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio,tipo_bomba bombas[])
+void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *jogador, clock_t *inicio, tipo_bomba bombas[])
 {
-    int i, j, x, y, num_inimigos=0,difx,dify,difbx[MAXEN]= {0},difby[MAXEN]= {0};
+    int i, j, x, y, aux2, novadir, num_inimigos=0,difx,dify,difbx[MAXEN]= {0},difby[MAXEN]= {0};
 
     if(conta_tempo_inimigos(inicio)==1)
     {
@@ -990,36 +1037,38 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                 x = inimigos[i].x-1;
                 y = inimigos[i].y-2;
                 num_inimigos++;
-                if(MOVAV){
-                for(j=0; j<NUMBOMBAS; j++) // Roda para verificar todas as bombas
+                if(jogador->nivel == 2)
                 {
-                    if(bombas[j].acionada==1)  // Calcula a distancia só das bombas acionadas no momento
+                    for(j=0; j<NUMBOMBAS; j++) // Roda para verificar todas as bombas
                     {
-                        difbx[i]=bombas[j].tx-inimigos[i].x;
-                        difby[i]=bombas[j].ty-inimigos[i].y;
+                        if(bombas[j].acionada==1)  // Calcula a distancia só das bombas acionadas no momento
+                        {
+                            difbx[i]=bombas[j].tx-inimigos[i].x;
+                            difby[i]=bombas[j].ty-inimigos[i].y;
+                        }
+                        if (bombas[j].acionada==1&&((difbx[i]>-RADAR&&difbx[i]<RADAR)&&(difby[i]>-RADAR&&difby[i]<RADAR))) //Ve se tem alguma bomba acionada e no raio que o inimigo pode ver
+                        {
+                            procurabomba(&bombas[j],&inimigos[i],mapa);
+                            inimigos[i].auxmudanca=0; //Usei isso como uma flag para impedir que ele persiga o jogador no próximo else, pq talvez a bomba 2 esteja acionado mas a três não, entao preciso ter certeza que ele nao vai mudar
+                        }
+                        else if (inimigos[i].auxmudanca!=0)   //Caso nao tenha nenhuma bomba no seu raio de percepção verifica se o jogador está
+                        {
+                            procurajogador(jogador,&inimigos[i],mapa);
+                        }
                     }
-                    if (bombas[j].acionada==1&&((difbx[i]>-RADAR&&difbx[i]<RADAR)&&(difby[i]>-RADAR&&difby[i]<RADAR))) //Ve se tem alguma bomba acionada e no raio que o inimigo pode ver
-                    {
-                        procurabomba(&bombas[j],&inimigos[i],mapa);
-                        inimigos[i].auxmudanca=0; //Usei isso como uma flag para impedir que ele persiga o jogador no próximo else, pq talvez a bomba 2 esteja acionado mas a três não, entao preciso ter certeza que ele nao vai mudar
-                    }
-                    else if (inimigos[i].auxmudanca!=0)   //Caso nao tenha nenhuma bomba no seu raio de percepção verifica se o jogador está
-                    {
-                        procurajogador(jogador,&inimigos[i],mapa);
-                    }
-                }
                 }
 
                 difx=jogador->x-inimigos[i].x;
                 dify=jogador->y-inimigos[i].y;
                 switch (inimigos[i].direcao)
-                {//Movimentação padrão
+                {
+                //Movimentação padrão
                 case 0: //PARA CIMA
                     inimigos[i].frente = 'c';
                     if(mapa->tamanho[y-1][x]==jogador->caractere&&dify!=0&&(difx<=RADAR||difx>=-RADAR))//VERIFICA COLISAO COM JOGADOR
                     {
                         invertedirecao(&inimigos[i]);
-                       //novadirecaoinimigos(&inimigos[i]);
+                        //novadirecaoinimigos(&inimigos[i]);
                         mortejogador(jogador,mapa,inimigos);
 
                     }
@@ -1083,13 +1132,13 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     }
                     break;
                 case 3: //PARA DIREITA
+                    inimigos[i].frente = 'd';
                     if(mapa->tamanho[y][x+1]==jogador->caractere&&difx!=0&&(dify<=RADAR||dify>=-RADAR))
                     {
                         invertedirecao(&inimigos[i]);
                         //novadirecaoinimigos(&inimigos[i]);
                         mortejogador(jogador,mapa,inimigos);
                     }
-                    inimigos[i].frente = 'd';
                     if(mapa->tamanho[y][x+1]== VAZIO)
                     {
                         putchxy(inimigos[i].x,inimigos[i].y,' ');
@@ -1109,7 +1158,6 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
             }
         }
     }
-
     textcolor(WHITE);
 }
 int conta_tempo_inimigos(clock_t *start)
@@ -1164,8 +1212,10 @@ void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], 
                         break;
 
                     case '@':
-                        mapa->tamanho[y][x] = VAZIO;
-                        putchxy(x+1, y+2, VAZIO);
+                        if(x == bombas[i].mx && y == bombas[i].my){
+                            mapa->tamanho[y][x] = VAZIO;
+                            putchxy(x+1, y+2, VAZIO);
+                        }
                         break;
 
                     case 'E':
@@ -1190,9 +1240,9 @@ void explode_bomba(tipo_mapa *mapa, tipo_jogador *jogador, tipo_bomba bombas[], 
                         break;
 
                     case 'J':
-                        //mortejogador(jogador, mapa, inimigos);
                         morte = 1;
                         break;
+
                     }
                 }
             }
@@ -1212,21 +1262,20 @@ void HideCursor()
     CONSOLE_CURSOR_INFO cursor = {1, FALSE};
     SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursor);
 }
-
 void novapos(tipo_jogador* jogador, tipo_mapa* mapa)
 {
-    int x, y, i, j, emboscada;
-    clock_t start,start1;
-    start=clock();
-    start1=start/2;
+    int x, y, i, j, emboscada=0;
+
+    putchxy(jogador->x, jogador->y, VAZIO);
+    mapa->tamanho[jogador->y-2][jogador->x-1] = VAZIO;
+
     do
     {
-        emboscada = 0;
-        x=rand()%mapa->largura;
-        y=rand()%mapa->altura+1;
-        for(i=x-2; i<=x; i++)
+        x=rand()%mapa->largura; //%60
+        y=rand()%mapa->altura; //%25
+        for(i=x-1; i<=x+1; i++)
         {
-            for(j=y-3; j<=y-1; j++)
+            for(j=y-1; j<=y+1; j++)
             {
                 if(mapa->tamanho[j][i] == 'E')
                 {
@@ -1236,23 +1285,20 @@ void novapos(tipo_jogador* jogador, tipo_mapa* mapa)
         }
 
     }
-    while(mapa->tamanho[y-2][x-1] != VAZIO || emboscada/*||mapa->tamanho[y-2][x-1]=='W'*/);
+    while(mapa->tamanho[y][x] != VAZIO || emboscada);
 
-    putchxy(jogador->x,jogador->y,' ');
-    textcolor(RED);
-    putchxy(x,y, PLAYER);
-    atualizamapa(jogador->caractere, mapa, jogador);
-    jogador->x=x;//+1;
-    jogador->y=y;//+2;
+    mapa->tamanho[y][x] = jogador->caractere;
+
+    jogador->y = y+2;
+    jogador->x = x+1;
+
     textcolor(LIGHTCYAN);
-    putchxy(x,y, PLAYER);
-    while(!getch());
-    putchxy(x,y, PLAYER);
-    atualizamapa(jogador->caractere, mapa, jogador);
-    atualizamapa(BOMBA, mapa, jogador);
-}
+    putchxy(jogador->x, jogador->y, PLAYER);
+    textcolor(WHITE);
 
-void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[])
+    aguarda_teclado();
+}
+void mortejogador(tipo_jogador *jogador, tipo_mapa *mapa, tipo_jogador inimigos[])
 {
     jogador->vidas--;
     jogador->pontos-=100;
@@ -1263,8 +1309,7 @@ void mortejogador(tipo_jogador* jogador, tipo_mapa* mapa,tipo_jogador inimigos[]
     status(jogador, inimigos);
 
 }
-
-void novadirecaoinimigos(tipo_jogador* inimigos)
+void novadirecaoinimigos(tipo_jogador *inimigos)
 {
     int aux=0,novadir;
     do
@@ -1280,8 +1325,7 @@ void novadirecaoinimigos(tipo_jogador* inimigos)
     aux=0;
     inimigos->auxmudanca=0;
 }
-
-void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa)
+void procurajogador(tipo_jogador *jogador,tipo_jogador *inimigos, tipo_mapa *mapa)
 {
 
     int difx,dify,x,y,diresc=0;
@@ -1331,15 +1375,24 @@ void procurajogador(tipo_jogador* jogador,tipo_jogador* inimigos,tipo_mapa *mapa
     }
 
 }
-void invertedirecao(tipo_jogador* inimigos){
-switch(inimigos->direcao){
-case 0: inimigos->direcao=1; break;
-case 1: inimigos->direcao=0; break;
-case 2: inimigos->direcao=3; break;
-case 3: inimigos->direcao=2; break;
+void invertedirecao(tipo_jogador* inimigos)
+{
+    switch(inimigos->direcao)
+    {
+    case 0:
+        inimigos->direcao=1;
+        break;
+    case 1:
+        inimigos->direcao=0;
+        break;
+    case 2:
+        inimigos->direcao=3;
+        break;
+    case 3:
+        inimigos->direcao=2;
+        break;
+    }
 }
-}
-
 void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
 {
 //BOMBA EH A MESMA COISA SÓ QUE COM A DIRECAO ESCOLHIDA AO CONTRARIO
@@ -1406,4 +1459,3 @@ void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
           inimigos->direcao=1;
       }*/
 }
-
