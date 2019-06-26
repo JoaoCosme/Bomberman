@@ -170,13 +170,13 @@ void reset(tipo_jogador *jogador, int start)
 }
 void status(tipo_jogador *jogador, tipo_jogador inimigos[])
 {
-    //Funão para atualização dos dados exibidos em tela do jogo
+    //Função para atualização dos dados exibidos em tela do jogo
     int i, num_inimigos=0;
     for(i=0; i<MAXEN; i++)
     {
         if(inimigos[i].vidas)
         {
-            num_inimigos++;
+            num_inimigos++; //Verifica quantos inimigos ainda estão vivos
         }
     }
     if(jogador->pontos < 0)
@@ -635,7 +635,7 @@ void inicializa_mapa(char nome_arquivo[], tipo_mapa *mapa, int *endgame)
 }
 void imprime(tipo_mapa mapa)
 {
-    //Impressão do mapa na tela
+    //Impressão do mapa na tela, com as conversões para cada tipo de item
     int i, j;
     gotoxy(1,2);
     for(i=0; i<mapa.altura; i++)
@@ -698,7 +698,16 @@ void imprime(tipo_mapa mapa)
             default:
                 putchxy(j+1, i+2, mapa.tamanho[i][j]);
             }
+            if(mapa.tamanho[i][j]=='W'&&(i==0||j==0||i==mapa.altura-1||j==mapa.largura-1))//Colorir as bordas do jogo conforme os prints do pdf do sor
+            {
+                textbackground(LIGHTBLUE);
+                textcolor(LIGHTBLUE);
+                putchxy(j+1, i+2, '#');
+                textbackground(BLACK);
+                textcolor(WHITE);
+            }
         }
+
         //printf("\n");
         //printf("%s", mapa.tamanho[i]);
 
@@ -847,7 +856,7 @@ void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bom
     //Inserção de bomba
     case 'b'://BOMBA
     case 'B':
-    case '5':
+   // case '5':
         if(jogador->bombas>0)
         {
 
@@ -951,7 +960,8 @@ void acao_jogador(tipo_jogador *jogador, tipo_jogador inimigos[], tipo_bomba bom
         jogador->frente = 'e';
         break;
 
-    case '2':
+    case '5':
+        case '2':
         jogador->frente = 'b';
         break;
 
@@ -1016,9 +1026,9 @@ void inicializa_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, int first_run
 
         }
     }
-    encontra(inimigos, mapa, num_inimigos);
+    encontra(inimigos, mapa, num_inimigos);//Encontra as posições de cada inimigo no mapa
 
-    for(i=0; i<num_inimigos; i++)
+    for(i=0; i<num_inimigos; i++) //Define uma direção inicial para cada inimigo seguir
     {
         inimigos[i].direcao=rand()%4;
     }
@@ -1032,9 +1042,9 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
         textcolor(LIGHTRED);
         for(i=0; i<MAXEN; i++)
         {
-            if(inimigos[i].vidas == 1) //VERIFICA SE O INIMIGO ESTÁ VIVO
+            if(inimigos[i].vidas == 1) //Verifica se o inimigo está vivo
             {
-                x = inimigos[i].x-1;
+                x = inimigos[i].x-1; //Correção para tela conforme funções anteriores
                 y = inimigos[i].y-2;
                 num_inimigos++;
                 if(jogador->nivel == 2)
@@ -1046,7 +1056,7 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                             difbx[i]=bombas[j].tx-inimigos[i].x;
                             difby[i]=bombas[j].ty-inimigos[i].y;
                         }
-                        if (bombas[j].acionada==1&&((difbx[i]>-RADAR&&difbx[i]<RADAR)&&(difby[i]>-RADAR&&difby[i]<RADAR))) //Ve se tem alguma bomba acionada e no raio que o inimigo pode ver
+                        if (bombas[j].acionada==1&&((difbx[i]>-RADAR&&difbx[i]<RADAR)&&(difby[i]>-RADAR&&difby[i]<RADAR))) //Verifica se tem alguma bomba acionada e no raio que o inimigo pode ver
                         {
                             procurabomba(&bombas[j],&inimigos[i],mapa);
                             inimigos[i].auxmudanca=0; //Usei isso como uma flag para impedir que ele persiga o jogador no próximo else, pq talvez a bomba 2 esteja acionado mas a três não, entao preciso ter certeza que ele nao vai mudar
@@ -1067,8 +1077,8 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     inimigos[i].frente = 'c';
                     if(mapa->tamanho[y-1][x]==jogador->caractere&&dify!=0&&(difx<=RADAR||difx>=-RADAR))//VERIFICA COLISAO COM JOGADOR
                     {
-                        invertedirecao(&inimigos[i]);
-                        //novadirecaoinimigos(&inimigos[i]);
+
+                        novadirecaoinimigos(&inimigos[i]);
                         mortejogador(jogador,mapa,inimigos);
 
                     }
@@ -1090,8 +1100,8 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     inimigos[i].frente = 'b';
                     if(mapa->tamanho[y+1][x]==jogador->caractere&&dify!=0&&(difx<=RADAR||difx>=-RADAR))
                     {
-                        invertedirecao(&inimigos[i]);
-                        //novadirecaoinimigos(&inimigos[i]);
+
+                        novadirecaoinimigos(&inimigos[i]);
                         mortejogador(jogador,mapa,inimigos);
                     }
                     if(mapa->tamanho[y+1][x]==VAZIO)
@@ -1113,8 +1123,8 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     inimigos[i].frente = 'e';
                     if(mapa->tamanho[y][x-1]==jogador->caractere&&difx!=0&&(dify<=RADAR||dify>=-RADAR))
                     {
-                        invertedirecao(&inimigos[i]);
-                        //novadirecaoinimigos(&inimigos[i]);
+
+                        novadirecaoinimigos(&inimigos[i]);
                         mortejogador(jogador,mapa,inimigos);
                     }
                     if(mapa->tamanho[y][x-1]==VAZIO)
@@ -1135,8 +1145,8 @@ void movimento_inimigos(tipo_jogador inimigos[], tipo_mapa *mapa, tipo_jogador *
                     inimigos[i].frente = 'd';
                     if(mapa->tamanho[y][x+1]==jogador->caractere&&difx!=0&&(dify<=RADAR||dify>=-RADAR))
                     {
-                        invertedirecao(&inimigos[i]);
-                        //novadirecaoinimigos(&inimigos[i]);
+
+                        novadirecaoinimigos(&inimigos[i]);
                         mortejogador(jogador,mapa,inimigos);
                     }
                     if(mapa->tamanho[y][x+1]== VAZIO)
@@ -1263,7 +1273,7 @@ void HideCursor()
     SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cursor);
 }
 void novapos(tipo_jogador* jogador, tipo_mapa* mapa)
-{
+{//Função para encontrar uma nova posição para o jogador sempre que ele morrer
     int x, y, i, j, emboscada=0;
 
     putchxy(jogador->x, jogador->y, VAZIO);
@@ -1296,7 +1306,7 @@ void novapos(tipo_jogador* jogador, tipo_mapa* mapa)
     putchxy(jogador->x, jogador->y, PLAYER);
     textcolor(WHITE);
 
-    aguarda_teclado();
+    aguarda_teclado(); //Pausa o jogo até o jogador realizar mais um movimento
 }
 void mortejogador(tipo_jogador *jogador, tipo_mapa *mapa, tipo_jogador inimigos[])
 {
@@ -1335,7 +1345,7 @@ void procurajogador(tipo_jogador *jogador,tipo_jogador *inimigos, tipo_mapa *map
     dify=jogador->y-inimigos->y;
     if (dify!=0&&(mapa->tamanho[y+1][x]==VAZIO||mapa->tamanho[y-1][x]==VAZIO)) //VERIFICA EM Y SE A DISTANCIA DO JOGADOR TA DENTRO DO RADAR E SE O INIMIGO PODE SE MOVER NESSA DIRECAO/
     {
-        if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))
+        if (dify>0&&dify<RADAR&&diresc<2&&mapa->tamanho[y+1][x]==VAZIO&&(difx>0&&difx<RADAR||difx<0&&difx>-RADAR))//Verifica a diferença em Y,se a próxima posição está disponivel para se mexer e se o jogador está no raio de visão do inimigo
         {
             inimigos->direcao=1;
             diresc++;
@@ -1375,27 +1385,10 @@ void procurajogador(tipo_jogador *jogador,tipo_jogador *inimigos, tipo_mapa *map
     }
 
 }
-void invertedirecao(tipo_jogador* inimigos)
-{
-    switch(inimigos->direcao)
-    {
-    case 0:
-        inimigos->direcao=1;
-        break;
-    case 1:
-        inimigos->direcao=0;
-        break;
-    case 2:
-        inimigos->direcao=3;
-        break;
-    case 3:
-        inimigos->direcao=2;
-        break;
-    }
-}
+
 void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
 {
-//BOMBA EH A MESMA COISA SÓ QUE COM A DIRECAO ESCOLHIDA AO CONTRARIO
+//Bomba segue o mesmo padrão de procurar jogador, só que com a escolha final de posição invertida
     int difx,dify,x,y,diresc=0;
     x = inimigos->x-1;
     y = inimigos->y-2;
@@ -1425,13 +1418,13 @@ void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
         }
     }
 
-    if (dify==0)//&&(mapa->tamanho[y][x-1]!= VAZIO||mapa->tamanho[y][x+1]!= VAZIO))
+    if (dify==0)
     {
         if (difx>0)
             inimigos->direcao=2;
         else inimigos->direcao=3;
     }
-    if (difx==0)//&&(mapa->tamanho[y+1][x]!=VAZIO||mapa->tamanho[y-1][x]!=VAZIO))
+    if (difx==0)
     {
         if (dify>0)
             inimigos->direcao=0;
@@ -1440,22 +1433,21 @@ void procurabomba(tipo_bomba* bomba,tipo_jogador* inimigos,tipo_mapa *mapa)
     /* ESSE CODIGO COMENTADO SE REFERE A IMPEDIR QUE ELE FIQUE TRAVADO EM UM CANTO AO TENTAR FUGIR DA BOMBA, AINDA NAO SEI SE VALE A PENA
       O PROBLEMA QUE ESTOU TENDO É COM A PRIORIDADE DE TROCAR DE DIRECAO, ELE ATÉ MUDA UMA VEZ, MAS NAO SE MANTEM NESSE CASO
       VERIFICAR FORMA DE TRAVAR ISSO
-
-      if((inimigos->direcao==0&&mapa->tamanho[y-1][x]!=VAZIO))
+*/
+      if((inimigos->direcao==0&&mapa->tamanho[y-1][x]!=VAZIO&&mapa->tamanho[y][x-1]==VAZIO))
           inimigos->direcao=2;
-      else if(mapa->tamanho[y][x-1]!=VAZIO&&inimigos->direcao==0)
+      else if(mapa->tamanho[y][x-1]!=VAZIO&&inimigos->direcao==0&&mapa->tamanho[y][x+1]==VAZIO)
           inimigos->direcao=3;
-      else if((inimigos->direcao==1&&mapa->tamanho[y+1][x]!=VAZIO))
+      else if((inimigos->direcao==1&&mapa->tamanho[y+1][x]!=VAZIO&&mapa->tamanho[y][x-1]==VAZIO))
           inimigos->direcao=2;
-      else if(mapa->tamanho[y][x-1]!=VAZIO&&inimigos->direcao==1)
+      else if(mapa->tamanho[y][x-1]!=VAZIO&&inimigos->direcao==1&&mapa->tamanho[y][x+1]==VAZIO)
           inimigos->direcao=3;
-      if(inimigos->direcao==2&&mapa->tamanho[y][x-1]!=VAZIO)
+      else if(inimigos->direcao==2&&mapa->tamanho[y][x-1]!=VAZIO&&mapa->tamanho[y-1][x]==VAZIO)
           inimigos->direcao=0;
-      else if(mapa->tamanho[y-1][x]!=VAZIO&&inimigos->direcao==2)
+      else if(mapa->tamanho[y-1][x]!=VAZIO&&inimigos->direcao==2&&mapa->tamanho[y+1][x]==VAZIO)
           inimigos->direcao=1;
-      else if((inimigos->direcao==3)&&mapa->tamanho[y][x+1]!=VAZIO)
+      else if((inimigos->direcao==3)&&mapa->tamanho[y][x+1]!=VAZIO&&mapa->tamanho[y-1][x]==VAZIO)
           inimigos->direcao=0;
-      else if(mapa->tamanho[y-1][x]!=VAZIO&&inimigos->direcao==3)
+      else if(mapa->tamanho[y-1][x]!=VAZIO&&inimigos->direcao==3&&mapa->tamanho[y+1][x]==VAZIO)
           inimigos->direcao=1;
-      }*/
-}
+      }
