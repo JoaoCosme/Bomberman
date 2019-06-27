@@ -1119,12 +1119,13 @@ void HideCursor(){
 }
 void novapos(tipo_personagem* jogador, tipo_mapa* mapa){
     //Função para encontrar uma nova posição para o jogador sempre que ele morrer
-    int x, y, i, j, emboscada=0;
+    int x, y, i, j, emboscada;
 
     putchxy(jogador->x, jogador->y, VAZIO);
     mapa->tamanho[jogador->y-2][jogador->x-1] = VAZIO;
 
     do{
+        emboscada = 0;
         x=rand()%mapa->largura; //%60
         y=rand()%mapa->altura; //%25
         for(i=x-1; i<=x+1; i++){
